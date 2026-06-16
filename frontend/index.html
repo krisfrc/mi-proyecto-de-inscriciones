@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escuela básica nacional la cuadra de Bolivar — Inscripciones</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <a href="index.html" class="brand">
+            <span class="brand-icon" aria-hidden="true">🎓</span>
+            <span class="brand-name">Escuela básica nacional la cuadra de Bolivar</span>
+        </a>
+        <nav>
+            <ul>
+                <li><a href="#inicio">Inicio</a></li>
+                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="#proceso">Proceso</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+            </ul>
+            <div class="auth-buttons-main">
+                <a href="login/login.html?form=login" class="btn btn-ghost btn-sm">Ingresar</a>
+                <a href="login/login.html?form=register" class="btn btn-primary btn-sm">Registrarse</a>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero" id="inicio">
+        <div class="hero-inner">
+            <div>
+                <span class="hero-badge">Ciclo lectivo 2026</span>
+                <h2 class="display-title">Inscribe a tu hijo <span>en minutos</span></h2>
+                <p class="hero-desc">
+                    Sistema digital con seguimiento en tiempo real. Funciona desde el celular o desde cualquier navegador.
+                </p>
+                <div class="hero-actions">
+                    <a href="login/login.html?form=register" class="btn btn-accent btn-lg">Comenzar inscripción</a>
+                    <a href="login/login.html?form=login" class="btn btn-outline btn-lg">Iniciar sesión</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-card-stack">
+                    <div class="hero-stat">
+                        <span class="hero-stat-icon">📱</span>
+                        <div>
+                            <strong>Desde el celular</strong>
+                            <span>Abre la web en tu teléfono</span>
+                        </div>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-icon">📊</span>
+                        <div>
+                            <strong>Seguimiento en vivo</strong>
+                            <span>Estado: pendiente → aprobada</span>
+                        </div>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="hero-stat-icon">🔒</span>
+                        <div>
+                            <strong>Datos seguros</strong>
+                            <span>Guardados en PostgreSQL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="servicios">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Todo lo que necesitas</h2>
+                <p class="section-sub">Una plataforma pensada para familias y para el equipo administrativo de la escuela.</p>
+            </div>
+            <div class="features-grid">
+                <article class="feature-card">
+                    <div class="feature-card__icon feature-card__icon--teal">👨‍👩‍👧</div>
+                    <h3>Panel familiar</h3>
+                    <p>Registra estudiantes, direcciones e inscripciones desde tu cuenta personal.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-card__icon feature-card__icon--coral">⚙️</div>
+                    <h3>Gestión admin</h3>
+                    <p>Revisa solicitudes, cambia estados y consulta el historial completo de cada trámite.</p>
+                </article>
+                <article class="feature-card">
+                    <div class="feature-card__icon feature-card__icon--gold">📲</div>
+                    <h3>Desde el celular</h3>
+                    <p>Registra e inscribe desde el navegador del teléfono, sin instalar aplicaciones.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section--alt" id="proceso">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">¿Cómo funciona?</h2>
+                <p class="section-sub">Cuatro pasos simples para completar la inscripción.</p>
+            </div>
+            <div class="steps-row">
+                <div class="step-item">
+                    <div class="step-num">1</div>
+                    <h4>Crear cuenta</h4>
+                    <p>Regístrate con tu cédula y datos de contacto.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">2</div>
+                    <h4>Datos del alumno</h4>
+                    <p>Nombre, grado y documentación del estudiante.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">3</div>
+                    <h4>Dirección</h4>
+                    <p>Ubicación de residencia de la familia.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-num">4</div>
+                    <h4>Confirmar</h4>
+                    <p>Envío con estado pendiente hasta revisión.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="contacto">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Contáctanos</h2>
+                <p class="section-sub">Tu mensaje queda guardado para que el equipo de la escuela pueda responderte.</p>
+            </div>
+            <div class="contact-grid">
+                <aside class="contact-info">
+                    <h3>¿Tienes dudas?</h3>
+                    <p>Te ayudamos con el proceso de inscripción, horarios y documentación requerida.</p>
+                    <div class="contact-detail">📍 Barrio Praderas Del Sur, Parroquia Jose Dominguez Rus, Municipio San Francisco, Estado Zulia</div>
+                </aside>
+                <article class="card">
+                    <form id="contact-form" class="form-stack">
+                        <div class="form-field">
+                            <label for="contact-nombre">Nombre</label>
+                            <input type="text" id="contact-nombre" name="nombre" placeholder="Tu nombre" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="contact-mensaje">Mensaje</label>
+                            <textarea id="contact-mensaje" name="mensaje" rows="4" placeholder="Escribe tu consulta..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Enviar mensaje</button>
+                    </form>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar · Sistema de inscripciones</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

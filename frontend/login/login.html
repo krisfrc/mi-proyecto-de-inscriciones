@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso — Escuela básica nacional la cuadra de Bolivar</title>
+    <link rel="stylesheet" href="../css/theme.css">
+</head>
+<body class="auth-page">
+    <aside class="auth-brand">
+        <a href="../index.html" class="btn btn-outline btn-sm" style="align-self:flex-start;margin-bottom:2rem;border-color:rgba(255,255,255,0.35);color:white">← Inicio</a>
+        <h1>Escuela básica nacional la cuadra de Bolivar</h1>
+        <p>Gestioná inscripciones, seguí el estado de cada solicitud y accedé a tu panel familiar o administrativo.</p>
+    </aside>
+
+    <main class="auth-panel">
+        <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab active" data-form="login" id="tab-login">Iniciar sesión</button>
+            <button type="button" class="auth-tab" data-form="register" id="tab-register">Crear cuenta</button>
+        </div>
+
+        <form id="login-form" class="auth-form active">
+            <h2>Bienvenido de nuevo</h2>
+            <p class="form-hint">Ingresa con tu cédula y contraseña.</p>
+            <div class="form-field">
+                <label for="login-cedula">Cédula</label>
+                <input type="text" id="login-cedula" name="cedula" placeholder="Ej. 2020" required autocomplete="username">
+            </div>
+            <div class="form-field">
+                <label for="login-pass">Contraseña</label>
+                <input type="password" id="login-pass" name="contraseña" placeholder="••••••" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">Ingresar</button>
+        </form>
+
+        <form id="register-form" class="auth-form">
+            <h2>Crear cuenta</h2>
+            <p class="form-hint">Regístrate para inscribir estudiantes.</p>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="reg-nombre">Nombre</label>
+                    <input type="text" id="reg-nombre" name="nombre" required>
+                </div>
+                <div class="form-field">
+                    <label for="reg-apellido">Apellido</label>
+                    <input type="text" id="reg-apellido" name="apellido" required>
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="reg-cedula">Cédula</label>
+                <input type="text" id="reg-cedula" name="cedula" required>
+            </div>
+            <div class="form-field">
+                <label for="reg-pass">Contraseña</label>
+                <input type="password" id="reg-pass" name="contraseña" placeholder="Mínimo 3 caracteres" minlength="3" required>
+            </div>
+            <button type="submit" class="btn btn-accent btn-block btn-lg">Registrarse</button>
+        </form>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

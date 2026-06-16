@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: escuela-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: inscripciones
+      POSTGRES_PASSWORD: inscripciones
+      POSTGRES_DB: escuela_inscripciones
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/schema/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/schema/migrations/002_flujo_inscripcion.sql:/docker-entrypoint-initdb.d/02-flujo.sql
+
+volumes:
+  postgres_data:

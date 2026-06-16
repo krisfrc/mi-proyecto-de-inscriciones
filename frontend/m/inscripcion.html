@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Inscripción móvil</title>
+    <link rel="stylesheet" href="../css/theme.css">
+</head>
+<body>
+    <header class="app-header">
+        <a href="../index.html" class="brand">
+            <span class="brand-icon">🎓</span>
+            <span class="brand-name">EBN La Cuadra de Bolivar</span>
+        </a>
+        <a href="../login/login.html?form=login" class="btn btn-outline btn-sm">Ya tengo cuenta</a>
+    </header>
+
+    <main class="mobile-page">
+        <div class="mobile-header">
+            <h2>Formulario de inscripción</h2>
+            <p>Completa los 4 pasos desde tu celular</p>
+        </div>
+
+        <div class="mobile-steps" aria-hidden="true">
+            <span class="active" id="step-1"></span>
+            <span id="step-2"></span>
+            <span id="step-3"></span>
+            <span id="step-4"></span>
+        </div>
+
+        <section class="card" id="panel-registro">
+            <h2><span class="step-label">1</span> Crear cuenta</h2>
+            <form id="register-form" class="form-stack">
+                <div class="form-field">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-field">
+                    <label>Apellido</label>
+                    <input type="text" name="apellido" required>
+                </div>
+                <div class="form-field">
+                    <label>Cédula</label>
+                    <input type="text" name="cedula" required>
+                </div>
+                <div class="form-field">
+                    <label>Contraseña</label>
+                    <input type="password" name="contraseña" minlength="3" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Continuar</button>
+            </form>
+        </section>
+
+        <section class="card" id="panel-estudiante" style="display:none">
+            <h2><span class="step-label">2</span> Datos del estudiante</h2>
+            <form id="estudiante-form" class="form-stack">
+                <div class="form-field">
+                    <label>Nombre del alumno</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-field">
+                    <label>Grado</label>
+                    <input type="text" name="grado" placeholder="Ej. 5to" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Siguiente</button>
+            </form>
+        </section>
+
+        <section class="card" id="panel-direccion" style="display:none">
+            <h2><span class="step-label">3</span> Dirección</h2>
+            <form id="direccion-form" class="form-stack">
+                <div class="form-field">
+                    <label>Calle</label>
+                    <input type="text" name="calle" placeholder="Opcional">
+                </div>
+                <div class="form-field">
+                    <label>Barrio</label>
+                    <input type="text" name="barrio" required>
+                </div>
+                <div class="form-field">
+                    <label>N° casa o apto.</label>
+                    <input type="text" name="n_casa" required>
+                </div>
+                <div class="form-field">
+                    <label>Parroquia</label>
+                    <input type="text" name="parroquia" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Municipio</label>
+                        <input type="text" name="municipio" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Estado</label>
+                        <input type="text" name="estado" required placeholder="Ej. Zulia">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Continuar</button>
+            </form>
+        </section>
+
+        <section class="card" id="panel-inscripcion" style="display:none">
+            <h2><span class="step-label">4</span> Confirmar</h2>
+            <form id="inscripcion-form" class="form-stack">
+                <div class="form-field">
+                    <label>Estudiante a inscribir</label>
+                    <select id="estudiante-select" required>
+                        <option value="">Selecciona</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-accent btn-block">Finalizar inscripción</button>
+            </form>
+            <div id="success-msg" class="success-banner" role="status"></div>
+        </section>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="inscripcion.js"></script>
+</body>
+</html>

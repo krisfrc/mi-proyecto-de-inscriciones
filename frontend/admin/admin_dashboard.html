@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración — Escuela básica nacional la cuadra de Bolivar</title>
+    <link rel="stylesheet" href="../css/theme.css">
+</head>
+<body>
+    <header class="app-header">
+        <a href="../index.html" class="brand">
+            <span class="brand-icon">⚙️</span>
+            <span class="brand-name">Administración</span>
+        </a>
+        <nav>
+            <span id="user-greeting" class="user-chip"></span>
+            <button id="logout-btn" class="btn btn-ghost btn-sm">Salir</button>
+        </nav>
+    </header>
+
+    <div class="dashboard-shell">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-brand">Panel Admin</div>
+            <ul class="sidebar-nav">
+                <li><a href="#inscripciones-lista" class="active">📋 Inscripciones</a></li>
+                <li><a href="#direcciones-lista">📍 Direcciones</a></li>
+                <li><a href="#contactos">✉️ Mensajes</a></li>
+            </ul>
+        </aside>
+
+        <main class="dashboard-main">
+            <div class="dashboard-top">
+                <h2>Panel administrador</h2>
+                <p id="admin-subtitle">Gestioná inscripciones, estados y mensajes de contacto.</p>
+            </div>
+
+            <div class="dashboard-layout dashboard-layout--2col">
+                <article class="card">
+                    <div class="card-header">
+                        <span class="card-header__icon">👤</span>
+                        <div><h2>Crear estudiante</h2></div>
+                    </div>
+                    <form id="estudiante-form" class="form-stack">
+                        <div class="form-field">
+                            <label>Nombre</label>
+                            <input type="text" name="nombre" required>
+                        </div>
+                        <div class="form-field">
+                            <label>Grado</label>
+                            <input type="text" name="grado" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Crear</button>
+                    </form>
+                </article>
+
+                <article class="card">
+                    <div class="card-header">
+                        <span class="card-header__icon">📝</span>
+                        <div><h2>Nueva inscripción</h2></div>
+                    </div>
+                    <form id="inscripcion-form" class="form-stack">
+                        <div class="form-field">
+                            <label>Estudiante</label>
+                            <select id="estudiante-select" required>
+                                <option value="">Selecciona estudiante</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-accent btn-block">Inscribir</button>
+                    </form>
+                </article>
+
+                <article class="card card--wide" id="inscripciones-lista">
+                    <div class="card-header">
+                        <span class="card-header__icon">📋</span>
+                        <div>
+                            <h2>Flujo de inscripciones</h2>
+                            <p>Cambiá el estado — cada cambio queda en el historial</p>
+                        </div>
+                    </div>
+                    <div id="inscripciones-container"></div>
+                </article>
+
+                <article class="card" id="direcciones-lista">
+                    <div class="card-header">
+                        <span class="card-header__icon">📍</span>
+                        <div><h2>Direcciones</h2></div>
+                    </div>
+                    <div id="direcciones-container"></div>
+                </article>
+
+                <article class="card">
+                    <div class="card-header">
+                        <span class="card-header__icon">➕</span>
+                        <div><h2>Agregar dirección</h2></div>
+                    </div>
+                    <form id="direccion-form" class="form-stack">
+                        <div class="form-field">
+                            <label>Calle</label>
+                            <input type="text" name="calle" placeholder="Opcional">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Barrio</label>
+                                <input type="text" name="barrio" required>
+                            </div>
+                            <div class="form-field">
+                                <label>N° casa o apto.</label>
+                                <input type="text" name="n_casa" required>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label>Parroquia</label>
+                            <input type="text" name="parroquia" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Municipio</label>
+                                <input type="text" name="municipio" required>
+                            </div>
+                            <div class="form-field">
+                                <label>Estado</label>
+                                <input type="text" name="estado" required placeholder="Ej. Zulia">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Guardar</button>
+                    </form>
+                </article>
+
+                <article class="card card--wide" id="contactos">
+                    <div class="card-header">
+                        <span class="card-header__icon">✉️</span>
+                        <div><h2>Mensajes de contacto</h2></div>
+                    </div>
+                    <div id="contactos-container"></div>
+                </article>
+            </div>
+        </main>
+    </div>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar — Administración</p>
+    </footer>
+    <script src="../js/api.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="admin_dashboard.js"></script>
+</body>
+</html>

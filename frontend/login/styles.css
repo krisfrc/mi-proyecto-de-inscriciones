@@ -1,0 +1,118 @@
+/* ===== Contenedor central ===== */
+.form-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px 25px;
+    background: #ffffff; /* blanco suave */
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08); /* sombra ligera */
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: transform 0.3s ease;
+}
+
+.form-container:hover {
+    transform: translateY(-3px); /* efecto sutil al pasar el mouse */
+}
+
+/* ===== Formularios ===== */
+.auth-form {
+    display: none; /* Se mostrará mediante JS */
+    flex-direction: column;
+}
+
+.auth-form h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Inputs */
+.auth-form input {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.auth-form input:focus {
+    border-color: #888;
+    box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    outline: none;
+}
+
+/* Botones comunes */
+.auth-form button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 15px;
+}
+
+/* Login Button - colores suaves */
+.btn-login {
+    background: linear-gradient(135deg, #6c7a89, #95a5a6);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+/* Register Button - colores suaves */
+.btn-register {
+    background: linear-gradient(135deg, #a3c4bc, #d5e8d4);
+    color: #333;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.btn-register:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+/* ===== Mensajes y efectos ===== */
+.auth-form p {
+    font-size: 14px;
+    color: #666;
+    margin-top: 10px;
+}
+
+/* Opcional: pequeños iconos en los inputs */
+.auth-form input::placeholder {
+    color: #999;
+}
+/* Botón Volver al Home */
+.home-button {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.btn-home {
+    display: inline-block;
+    padding: 8px 20px;
+    background-color: #e0e0e0; /* gris muy suave */
+    color: #333;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+}
+
+.btn-home:hover {
+    background-color: #d1d1d1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
