@@ -12,4 +12,11 @@
         const h = host === '127.0.0.1' ? 'localhost' : host;
         window.API_URL = `http://${h}:3000`;
     }
+
+    window.resolveAssetUrl = (url) => {
+        if (!url) return '';
+        if (/^https?:\/\//i.test(url)) return url;
+        const base = String(window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
+        return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
+    };
 })();

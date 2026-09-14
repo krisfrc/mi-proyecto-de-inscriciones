@@ -41,17 +41,37 @@
                         <span class="card-header__icon">👤</span>
                         <div>
                             <h2>Nuevo estudiante</h2>
-                            <p>Agregá un alumno a tu cuenta</p>
+                            <p>El representante ya está cargado en tu cuenta</p>
                         </div>
                     </div>
+                    <div id="representative-loaded" class="representative-chip"></div>
                     <form id="estudiante-form" class="form-stack">
                         <div class="form-field">
                             <label>Nombre completo</label>
                             <input type="text" name="nombre" placeholder="Ej. Juan Pérez" required>
                         </div>
                         <div class="form-field">
+                            <label>Cédula del alumno (opcional)</label>
+                            <input type="text" name="cedula" placeholder="Si no tiene, se usa la tuya + 1">
+                            <p class="field-hint">Si no tiene cédula, se genera a partir de la del representante.</p>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Grado</label>
+                                <select id="student-grade-select" name="grado_id" required>
+                                    <option value="">Selecciona grado</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Sección</label>
+                                <select id="student-section-select" name="seccion_id" required>
+                                    <option value="">Selecciona sección</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-field">
                             <label>Grado</label>
-                            <input type="text" name="grado" placeholder="Ej. 5to grado" required>
+                            <input type="text" id="student-grade-text" name="grado" readonly>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Crear estudiante</button>
                     </form>
@@ -114,10 +134,26 @@
                     </div>
                     <form id="inscripcion-form" class="form-stack">
                         <div class="form-field">
+                            <label>Período escolar</label>
+                            <select id="period-select" name="periodo_id">
+                                <option value="">Período activo</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
                             <label>Estudiante</label>
                             <select id="estudiante-select" name="estudiante_id" required>
                                 <option value="">Selecciona un estudiante</option>
                             </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Tipo de documento</label>
+                            <select id="doc-code">
+                                <option value="">Selecciona tipo</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Adjuntar PDFs (opcionales)</label>
+                            <input type="file" id="doc-files" accept="application/pdf" multiple>
                         </div>
                         <button type="submit" class="btn btn-accent btn-block">Inscribir</button>
                     </form>
@@ -149,6 +185,7 @@
         <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar</p>
     </footer>
     <script src="../js/api.js"></script>
+    <script src="../js/institution.js"></script>
     <script src="../js/ui.js"></script>
     <script src="usuario_dashboard.js"></script>
 </body>

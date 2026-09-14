@@ -23,49 +23,86 @@
             <div class="sidebar-brand">Panel Admin</div>
             <ul class="sidebar-nav">
                 <li><a href="#inscripciones-lista" class="active">📋 Inscripciones</a></li>
+                <li><a href="#preinscribir-operador">🖊️ Preinscribir</a></li>
                 <li><a href="#direcciones-lista">📍 Direcciones</a></li>
                 <li><a href="#contactos">✉️ Mensajes</a></li>
+                <li><a href="#configuraciones">⚙️ Configuraciones</a></li>
             </ul>
         </aside>
 
         <main class="dashboard-main">
             <div class="dashboard-top">
                 <h2>Panel administrador</h2>
-                <p id="admin-subtitle">Gestioná inscripciones, estados y mensajes de contacto.</p>
+                <p id="admin-subtitle">Gestioná preinscritos e inscritos por grado/sección.</p>
             </div>
 
             <div class="dashboard-layout dashboard-layout--2col">
-                <article class="card">
+                <article class="card card--wide" id="preinscribir-operador">
                     <div class="card-header">
-                        <span class="card-header__icon">👤</span>
-                        <div><h2>Crear estudiante</h2></div>
+                        <span class="card-header__icon">🖊️</span>
+                        <div>
+                            <h2>Preinscribir como operador</h2>
+                            <p>Primero elegí el representante. El alumno queda a su nombre.</p>
+                        </div>
                     </div>
-                    <form id="estudiante-form" class="form-stack">
-                        <div class="form-field">
-                            <label>Nombre</label>
-                            <input type="text" name="nombre" required>
+                    <form id="operator-form" class="form-stack">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Buscar representante</label>
+                                <input type="text" id="operator-rep-search" placeholder="Nombre o cédula">
+                            </div>
+                            <div class="form-field">
+                                <label>Representante</label>
+                                <select id="operator-rep-select" required>
+                                    <option value="">Selecciona un representante</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="operator-rep-info" class="representative-chip" hidden></div>
+                        <p class="field-hint">El representante tiene que existir. Si no aparece, debe registrarse primero.</p>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Nombre del alumno</label>
+                                <input type="text" id="operator-student-name" required>
+                            </div>
+                            <div class="form-field">
+                                <label>Cédula del alumno (opcional)</label>
+                                <input type="text" id="operator-student-cedula" placeholder="Si no tiene, se genera">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Grado</label>
+                                <select id="operator-grade-select" required>
+                                    <option value="">Selecciona grado</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Sección</label>
+                                <select id="operator-section-select" required>
+                                    <option value="">Selecciona sección</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Período escolar</label>
+                                <select id="operator-period-select">
+                                    <option value="">Período activo</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Tipo de documento</label>
+                                <select id="operator-doc-code">
+                                    <option value="">Selecciona tipo</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-field">
-                            <label>Grado</label>
-                            <input type="text" name="grado" required>
+                            <label>PDFs del alumno</label>
+                            <input type="file" id="operator-doc-files" accept="application/pdf" multiple>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-block">Crear</button>
-                    </form>
-                </article>
-
-                <article class="card">
-                    <div class="card-header">
-                        <span class="card-header__icon">📝</span>
-                        <div><h2>Nueva inscripción</h2></div>
-                    </div>
-                    <form id="inscripcion-form" class="form-stack">
-                        <div class="form-field">
-                            <label>Estudiante</label>
-                            <select id="estudiante-select" required>
-                                <option value="">Selecciona estudiante</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-accent btn-block">Inscribir</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Guardar preinscripción</button>
                     </form>
                 </article>
 
@@ -73,11 +110,42 @@
                     <div class="card-header">
                         <span class="card-header__icon">📋</span>
                         <div>
-                            <h2>Flujo de inscripciones</h2>
-                            <p>Cambiá el estado — cada cambio queda en el historial</p>
+                            <h2>Inscripciones seccionadas</h2>
+                            <p>Seleccioná grado/sección y gestioná preinscritos o inscritos.</p>
                         </div>
                     </div>
+                    <div class="enrollment-controls">
+                        <div class="form-field">
+                            <label>Período escolar</label>
+                            <select id="period-filter">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Grado</label>
+                            <select id="grade-filter">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Sección</label>
+                            <select id="section-filter">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Búsqueda</label>
+                            <input id="search-filter" type="text" placeholder="Representante, estudiante o cédula">
+                        </div>
+                    </div>
+                    <div class="tab-row" id="enrollment-tabs">
+                        <button type="button" class="tab-btn active" data-tab="preinscritos">Preinscritos</button>
+                        <button type="button" class="tab-btn" data-tab="inscritos">Inscritos</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="export-csv-btn">Exportar CSV</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="print-grid-btn">Imprimir PDF</button>
+                    </div>
                     <div id="inscripciones-container"></div>
+                    <div class="pagination-row" id="inscripciones-pagination"></div>
                 </article>
 
                 <article class="card" id="direcciones-lista">
@@ -88,42 +156,112 @@
                     <div id="direcciones-container"></div>
                 </article>
 
-                <article class="card">
+                <article class="card card--wide" id="configuraciones">
                     <div class="card-header">
-                        <span class="card-header__icon">➕</span>
-                        <div><h2>Agregar dirección</h2></div>
+                        <span class="card-header__icon">⚙️</span>
+                        <div><h2>Configuraciones</h2></div>
                     </div>
-                    <form id="direccion-form" class="form-stack">
-                        <div class="form-field">
-                            <label>Calle</label>
-                            <input type="text" name="calle" placeholder="Opcional">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-field">
-                                <label>Barrio</label>
-                                <input type="text" name="barrio" required>
+                    <div class="dashboard-layout dashboard-layout--2col">
+                        <div class="card card--wide">
+                            <div class="card-header">
+                                <span class="card-header__icon">🏫</span>
+                                <div><h3>Institución</h3></div>
                             </div>
-                            <div class="form-field">
-                                <label>N° casa o apto.</label>
-                                <input type="text" name="n_casa" required>
-                            </div>
+                            <form id="institution-form" class="form-stack">
+                                <div class="form-field">
+                                    <label>Nombre institución</label>
+                                    <input type="text" id="institution-name" required>
+                                </div>
+                                <div class="form-field">
+                                    <label>Logo de la institución</label>
+                                    <div class="logo-preview-wrap">
+                                        <img id="institution-logo-preview" alt="Logo actual" hidden>
+                                        <input type="file" id="institution-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif">
+                                    </div>
+                                    <p class="field-hint">Subí un PNG, JPG o WEBP. Reemplaza el logo actual.</p>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Color primario</label>
+                                        <input type="color" id="institution-primary" value="#0d5c63">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Color secundario</label>
+                                        <input type="color" id="institution-secondary" value="#e07a5f">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Guardar configuración</button>
+                            </form>
                         </div>
-                        <div class="form-field">
-                            <label>Parroquia</label>
-                            <input type="text" name="parroquia" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-field">
-                                <label>Municipio</label>
-                                <input type="text" name="municipio" required>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-header__icon">👩‍🏫</span>
+                                <div><h3>Registro de docentes</h3></div>
                             </div>
-                            <div class="form-field">
-                                <label>Estado</label>
-                                <input type="text" name="estado" required placeholder="Ej. Zulia">
-                            </div>
+                            <form id="teacher-form" class="form-stack">
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Nombre</label>
+                                        <input type="text" name="nombre" required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Apellido</label>
+                                        <input type="text" name="apellido" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Cédula</label>
+                                        <input type="text" name="cedula" required>
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Especialidad</label>
+                                        <input type="text" name="especialidad">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Teléfono</label>
+                                        <input type="text" name="telefono">
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Email</label>
+                                        <input type="email" name="email">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Grado</label>
+                                        <select name="grado_id" id="teacher-grade-select">
+                                            <option value="">Sin asignar</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Sección</label>
+                                        <select name="seccion_id" id="teacher-section-select">
+                                            <option value="">Sin asignar</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">Guardar docente</button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-block">Guardar</button>
-                    </form>
+                    </div>
+                    <div class="card card--wide">
+                        <div class="card-header">
+                            <span class="card-header__icon">👥</span>
+                            <div><h3>Usuarios del sistema</h3></div>
+                        </div>
+                        <div id="users-container"></div>
+                    </div>
+                    <div class="card card--wide">
+                        <div class="card-header">
+                            <span class="card-header__icon">📚</span>
+                            <div><h3>Docentes registrados</h3></div>
+                        </div>
+                        <div id="teachers-container"></div>
+                    </div>
                 </article>
 
                 <article class="card card--wide" id="contactos">
@@ -140,7 +278,36 @@
     <footer class="app-footer">
         <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar — Administración</p>
     </footer>
+
+    <div class="modal-backdrop" id="enrollment-modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Detalle de preinscripción</h3>
+                <button id="modal-close-btn" class="btn btn-ghost btn-sm" type="button">Cerrar</button>
+            </div>
+            <div id="modal-content" class="modal-content"></div>
+            <div class="modal-upload-box">
+                <div class="form-field">
+                    <label>Adjuntar PDF (ej. carta de compromiso)</label>
+                    <input type="file" id="modal-doc-files" accept="application/pdf" multiple>
+                </div>
+                <div class="form-field">
+                    <label>Tipo documento</label>
+                    <select id="modal-doc-code">
+                        <option value="">Selecciona tipo</option>
+                    </select>
+                </div>
+                <button id="modal-upload-docs-btn" class="btn btn-outline btn-sm" type="button">Subir documento</button>
+            </div>
+            <div class="modal-actions">
+                <button id="modal-approve-btn" class="btn btn-primary btn-sm" type="button">Aprobar</button>
+                <button id="modal-reject-btn" class="btn btn-danger btn-sm" type="button">Rechazar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../js/api.js"></script>
+    <script src="../js/institution.js"></script>
     <script src="../js/ui.js"></script>
     <script src="admin_dashboard.js"></script>
 </body>

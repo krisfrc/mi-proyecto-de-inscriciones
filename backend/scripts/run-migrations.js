@@ -7,6 +7,10 @@ const MIGRATIONS = [
     '002_flujo_inscripcion.sql',
     '003_direccion_venezuela.sql',
     '004_permisos_por_rol.sql',
+    '005_operatividad_inscripciones.sql',
+    '006_configuracion_institucion_docentes.sql',
+    '007_documentos_requeridos_y_seguridad.sql',
+    '008_preescolar_logo_docentes.sql',
 ];
 
 const run = async () => {

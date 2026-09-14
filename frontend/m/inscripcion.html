@@ -53,15 +53,32 @@
 
         <section class="card" id="panel-estudiante" style="display:none">
             <h2><span class="step-label">2</span> Datos del estudiante</h2>
+            <div id="mobile-representative-loaded" class="representative-chip"></div>
             <form id="estudiante-form" class="form-stack">
                 <div class="form-field">
                     <label>Nombre del alumno</label>
                     <input type="text" name="nombre" required>
                 </div>
                 <div class="form-field">
-                    <label>Grado</label>
-                    <input type="text" name="grado" placeholder="Ej. 5to" required>
+                    <label>Cédula del alumno (opcional)</label>
+                    <input type="text" name="cedula" placeholder="Si no tiene, se genera">
+                    <p class="field-hint">Si no tiene cédula, se usa la del representante + 1.</p>
                 </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>Grado</label>
+                        <select id="mobile-grade-select" name="grado_id" required>
+                            <option value="">Selecciona grado</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Sección</label>
+                        <select id="mobile-section-select" name="seccion_id" required>
+                            <option value="">Selecciona sección</option>
+                        </select>
+                    </div>
+                </div>
+                <input type="hidden" id="mobile-grade-text" name="grado">
                 <button type="submit" class="btn btn-primary btn-block">Siguiente</button>
             </form>
         </section>
@@ -103,10 +120,26 @@
             <h2><span class="step-label">4</span> Confirmar</h2>
             <form id="inscripcion-form" class="form-stack">
                 <div class="form-field">
+                    <label>Período escolar</label>
+                    <select id="mobile-period-select" name="periodo_id">
+                        <option value="">Período activo</option>
+                    </select>
+                </div>
+                <div class="form-field">
                     <label>Estudiante a inscribir</label>
                     <select id="estudiante-select" required>
                         <option value="">Selecciona</option>
                     </select>
+                </div>
+                <div class="form-field">
+                    <label>Tipo de documento</label>
+                    <select id="mobile-doc-code">
+                        <option value="">Selecciona tipo</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Adjuntar PDFs</label>
+                    <input id="mobile-doc-files" type="file" accept="application/pdf" multiple>
                 </div>
                 <button type="submit" class="btn btn-accent btn-block">Finalizar inscripción</button>
             </form>
@@ -115,6 +148,7 @@
     </main>
 
     <script src="../js/api.js"></script>
+    <script src="../js/institution.js"></script>
     <script src="../js/ui.js"></script>
     <script src="inscripcion.js"></script>
 </body>
