@@ -8,182 +8,240 @@
 </head>
 <body>
     <header class="app-header">
-        <a href="../index.html" class="brand">
+        <button type="button" class="brand" data-panel="estudiantes">
             <span class="brand-icon">🎓</span>
-            <span class="brand-name">Mi panel</span>
-        </a>
+            <span class="brand-name">Escuela básica nacional la cuadra de Bolivar</span>
+        </button>
         <nav>
             <span id="user-greeting" class="user-chip"></span>
-            <button id="logout-btn" class="btn btn-ghost btn-sm">Salir</button>
+            <button type="button" class="header-config-btn" data-panel="configuracion" title="Configuración" aria-label="Configuración">⚙️</button>
+            <a href="../index.html" class="btn btn-ghost btn-sm">Inicio</a>
+            <button id="logout-btn" class="btn btn-ghost btn-sm" type="button">Salir</button>
         </nav>
     </header>
+    <nav class="mobile-nav" id="user-mobile-nav"></nav>
 
     <div class="dashboard-shell">
         <aside class="dashboard-sidebar">
-            <div class="sidebar-brand">Escuela básica nacional la cuadra de Bolivar</div>
-            <ul class="sidebar-nav">
-                <li><a href="#estudiante" class="active">👤 Estudiantes</a></li>
-                <li><a href="#direccion">📍 Direcciones</a></li>
-                <li><a href="#inscripcion">📝 Inscripciones</a></li>
-                <li><a href="../index.html">🏠 Inicio</a></li>
+            <div class="sidebar-brand" data-institution-name>Escuela básica nacional la cuadra de Bolivar</div>
+            <ul class="sidebar-nav" id="user-sidebar-nav">
+                <li><button type="button" data-panel="estudiantes" class="active">👤 Estudiantes</button></li>
+                <li><button type="button" data-panel="direcciones">📍 Direcciones</button></li>
+                <li><button type="button" data-panel="inscripciones">📝 Inscripciones</button></li>
             </ul>
         </aside>
 
         <main class="dashboard-main">
-            <div class="dashboard-top">
-                <h2>Hola, <span id="user-name"></span></h2>
-                <p>Gestioná los datos de tus hijos y el estado de sus inscripciones.</p>
-            </div>
-
-            <div class="dashboard-layout dashboard-layout--2col">
-                <article class="card" id="estudiante">
-                    <div class="card-header">
-                        <span class="card-header__icon">👤</span>
-                        <div>
-                            <h2>Nuevo estudiante</h2>
-                            <p>El representante ya está cargado en tu cuenta</p>
+            <section class="user-panel is-active" id="panel-estudiantes">
+                <div class="dashboard-top">
+                    <h2>Estudiantes</h2>
+                    <p>Cargá un representado o corregí sus datos mientras no esté inscrito.</p>
+                </div>
+                <div class="dashboard-layout dashboard-layout--2col">
+                    <article class="card" id="estudiante">
+                        <div class="card-header">
+                            <span class="card-header__icon">👤</span>
+                            <div>
+                                <h2 id="student-form-title">Nuevo estudiante</h2>
+                                <p>El representante ya está cargado en tu cuenta</p>
+                            </div>
                         </div>
-                    </div>
-                    <div id="representative-loaded" class="representative-chip"></div>
-                    <form id="estudiante-form" class="form-stack">
-                        <div class="form-field">
-                            <label>Nombre completo</label>
-                            <input type="text" name="nombre" placeholder="Ej. Juan Pérez" required>
-                        </div>
-                        <div class="form-field">
-                            <label>Cédula del alumno (opcional)</label>
-                            <input type="text" name="cedula" placeholder="Si no tiene, se usa la tuya + 1">
-                            <p class="field-hint">Si no tiene cédula, se genera a partir de la del representante.</p>
-                        </div>
-                        <div class="form-row">
+                        <div id="representative-loaded" class="representative-chip"></div>
+                        <form id="estudiante-form" class="form-stack">
+                            <input type="hidden" id="student-edit-id" value="">
                             <div class="form-field">
-                                <label>Grado</label>
-                                <select id="student-grade-select" name="grado_id" required>
-                                    <option value="">Selecciona grado</option>
+                                <label>Nombre completo</label>
+                                <input type="text" name="nombre" placeholder="Ej. Juan Pérez" required>
+                            </div>
+                            <div class="form-field">
+                                <label>Cédula del alumno (opcional)</label>
+                                <input type="text" name="cedula" placeholder="Si no tiene, se usa la tuya + 1">
+                                <p class="field-hint">Si no tiene cédula, se genera a partir de la del representante.</p>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label>Grado</label>
+                                    <select id="student-grade-select" name="grado_id" required>
+                                        <option value="">Selecciona grado</option>
+                                    </select>
+                                </div>
+                                <div class="form-field">
+                                    <label>Sección</label>
+                                    <select id="student-section-select" name="seccion_id" required>
+                                        <option value="">Selecciona sección</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <input type="hidden" id="student-grade-text" name="grado">
+                            <div class="form-row">
+                                <button type="submit" class="btn btn-primary" id="student-submit-btn">Crear estudiante</button>
+                                <button type="button" class="btn btn-outline" id="student-cancel-edit" hidden>Cancelar edición</button>
+                            </div>
+                        </form>
+                    </article>
+                    <article class="card card--wide">
+                        <div class="card-header">
+                            <span class="card-header__icon">📋</span>
+                            <div><h2>Mis estudiantes</h2></div>
+                        </div>
+                        <div id="students-list"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="user-panel" id="panel-direcciones">
+                <div class="dashboard-top">
+                    <h2>Direcciones</h2>
+                    <p>Registrá o corregí el domicilio de la familia.</p>
+                </div>
+                <div class="dashboard-layout dashboard-layout--2col">
+                    <article class="card" id="direccion">
+                        <div class="card-header">
+                            <span class="card-header__icon">📍</span>
+                            <div><h2 id="address-form-title">Registrar dirección</h2></div>
+                        </div>
+                        <form id="direccion-form" class="form-stack">
+                            <input type="hidden" id="address-edit-id" value="">
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label>Calle</label>
+                                    <input type="text" name="calle" placeholder="Opcional">
+                                </div>
+                                <div class="form-field">
+                                    <label>Avenida</label>
+                                    <input type="text" name="av" placeholder="Opcional">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label>Barrio</label>
+                                    <input type="text" name="barrio" required>
+                                </div>
+                                <div class="form-field">
+                                    <label>N° casa o apto.</label>
+                                    <input type="text" name="n_casa" required>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label>Parroquia</label>
+                                <input type="text" name="parroquia" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label>Municipio</label>
+                                    <input type="text" name="municipio" required>
+                                </div>
+                                <div class="form-field">
+                                    <label>Estado</label>
+                                    <input type="text" name="estado" required placeholder="Ej. Zulia">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <button type="submit" class="btn btn-primary" id="address-submit-btn">Guardar dirección</button>
+                                <button type="button" class="btn btn-outline" id="address-cancel-edit" hidden>Cancelar edición</button>
+                            </div>
+                        </form>
+                    </article>
+                    <article class="card">
+                        <div class="card-header">
+                            <span class="card-header__icon">🏠</span>
+                            <div><h2>Mis direcciones</h2></div>
+                        </div>
+                        <div id="direcciones-container"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="user-panel" id="panel-inscripciones">
+                <div class="dashboard-top">
+                    <h2>Inscripciones</h2>
+                    <p>Enviá una preinscripción o corregí documentos si todavía no fue aprobada.</p>
+                </div>
+                <div class="dashboard-layout dashboard-layout--2col">
+                    <article class="card card--highlight" id="inscripcion">
+                        <div class="card-header">
+                            <span class="card-header__icon">📝</span>
+                            <div>
+                                <h2>Nueva inscripción</h2>
+                                <p>Envía la solicitud a revisión</p>
+                            </div>
+                        </div>
+                        <form id="inscripcion-form" class="form-stack">
+                            <div class="form-field">
+                                <label>Período escolar</label>
+                                <select id="period-select" name="periodo_id">
+                                    <option value="">Período activo</option>
                                 </select>
                             </div>
                             <div class="form-field">
-                                <label>Sección</label>
-                                <select id="student-section-select" name="seccion_id" required>
-                                    <option value="">Selecciona sección</option>
+                                <label>Estudiante</label>
+                                <select id="estudiante-select" name="estudiante_id" required>
+                                    <option value="">Selecciona un estudiante</option>
                                 </select>
                             </div>
+                            <div class="form-field">
+                                <label>Tipo de documento</label>
+                                <select id="doc-code">
+                                    <option value="">Selecciona tipo</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label>Adjuntar PDFs (opcionales)</label>
+                                <input type="file" id="doc-files" accept="application/pdf" multiple>
+                            </div>
+                            <button type="submit" class="btn btn-accent btn-block">Inscribir</button>
+                        </form>
+                    </article>
+                    <article class="card card--wide">
+                        <div class="card-header">
+                            <span class="card-header__icon">📊</span>
+                            <div>
+                                <h2>Mis inscripciones</h2>
+                                <p>Podés corregir o reenviar las que no estén aprobadas.</p>
+                            </div>
                         </div>
-                        <div class="form-field">
-                            <label>Grado</label>
-                            <input type="text" id="student-grade-text" name="grado" readonly>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Crear estudiante</button>
-                    </form>
-                </article>
+                        <div id="inscripciones-container"></div>
+                    </article>
+                </div>
+            </section>
 
-                <article class="card" id="direccion">
-                    <div class="card-header">
-                        <span class="card-header__icon">📍</span>
-                        <div>
-                            <h2>Registrar dirección</h2>
-                            <p>Domicilio de la familia</p>
-                        </div>
-                    </div>
-                    <form id="direccion-form" class="form-stack">
-                        <div class="form-row">
-                            <div class="form-field">
-                                <label>Calle</label>
-                                <input type="text" name="calle" placeholder="Opcional">
-                            </div>
-                            <div class="form-field">
-                                <label>Avenida</label>
-                                <input type="text" name="av" placeholder="Opcional">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-field">
-                                <label>Barrio</label>
-                                <input type="text" name="barrio" required>
-                            </div>
-                            <div class="form-field">
-                                <label>N° casa o apto.</label>
-                                <input type="text" name="n_casa" required>
-                            </div>
-                        </div>
-                        <div class="form-field">
-                            <label>Parroquia</label>
-                            <input type="text" name="parroquia" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-field">
-                                <label>Municipio</label>
-                                <input type="text" name="municipio" required>
-                            </div>
-                            <div class="form-field">
-                                <label>Estado</label>
-                                <input type="text" name="estado" required placeholder="Ej. Zulia">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Guardar dirección</button>
-                    </form>
-                </article>
-
-                <article class="card card--highlight" id="inscripcion">
-                    <div class="card-header">
-                        <span class="card-header__icon">📝</span>
-                        <div>
-                            <h2>Nueva inscripción</h2>
-                            <p>Envía la solicitud a revisión</p>
-                        </div>
-                    </div>
-                    <form id="inscripcion-form" class="form-stack">
-                        <div class="form-field">
-                            <label>Período escolar</label>
-                            <select id="period-select" name="periodo_id">
-                                <option value="">Período activo</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label>Estudiante</label>
-                            <select id="estudiante-select" name="estudiante_id" required>
-                                <option value="">Selecciona un estudiante</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label>Tipo de documento</label>
-                            <select id="doc-code">
-                                <option value="">Selecciona tipo</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label>Adjuntar PDFs (opcionales)</label>
-                            <input type="file" id="doc-files" accept="application/pdf" multiple>
-                        </div>
-                        <button type="submit" class="btn btn-accent btn-block">Inscribir</button>
-                    </form>
-                </article>
-
+            <section class="user-panel" id="panel-configuracion">
+                <div class="dashboard-top">
+                    <h2>Configuración</h2>
+                    <p>Cambio de correo y datos del representante.</p>
+                </div>
                 <article class="card">
-                    <div class="card-header">
-                        <span class="card-header__icon">🏠</span>
-                        <div><h2>Mis direcciones</h2></div>
-                    </div>
-                    <div id="direcciones-container"></div>
-                </article>
-
-                <article class="card card--wide">
-                    <div class="card-header">
-                        <span class="card-header__icon">📊</span>
-                        <div>
-                            <h2>Mis inscripciones</h2>
-                            <p>Estado del trámite en la escuela</p>
+                    <form id="profile-form" class="form-stack">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label>Nombre</label>
+                                <input type="text" name="nombre" id="profile-nombre" required>
+                            </div>
+                            <div class="form-field">
+                                <label>Apellido</label>
+                                <input type="text" name="apellido" id="profile-apellido" required>
+                            </div>
                         </div>
-                    </div>
-                    <div id="inscripciones-container"></div>
+                        <div class="form-field">
+                            <label>Cédula</label>
+                            <input type="text" id="profile-cedula" disabled>
+                        </div>
+                        <div class="form-field">
+                            <label>Correo electrónico</label>
+                            <input type="email" name="email" id="profile-email" required>
+                            <p class="field-hint">Si cambia el correo, también sirve para recuperar la contraseña.</p>
+                        </div>
+                        <div class="form-field">
+                            <label>Nueva contraseña (opcional)</label>
+                            <input type="password" name="contraseña" id="profile-password" minlength="3" placeholder="Dejá vacío si no querés cambiarla">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                    </form>
                 </article>
-            </div>
+            </section>
         </main>
     </div>
 
-    <footer class="app-footer">
-        <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar</p>
-    </footer>
     <script src="../js/api.js"></script>
     <script src="../js/institution.js"></script>
     <script src="../js/ui.js"></script>

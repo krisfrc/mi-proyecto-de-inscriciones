@@ -102,6 +102,7 @@ const renderEnrollmentRows = (rows) => {
 
 const loadEnrollmentGrid = async () => {
     const container = document.getElementById('inscripciones-container');
+    if (!container) return;
     container.innerHTML = '<p class="empty-state">Cargando inscripciones...</p>';
     const params = buildEnrollmentParams();
     try {
@@ -276,7 +277,8 @@ const uploadModalDocuments = async () => {
 };
 
 const closeEnrollmentModal = () => {
-    document.getElementById('enrollment-modal-backdrop').classList.remove('visible');
+    const backdrop = document.getElementById('enrollment-modal-backdrop');
+    if (backdrop) backdrop.classList.remove('visible');
     state.selectedEnrollmentId = null;
 };
 
@@ -377,6 +379,7 @@ const loadCatalogs = async () => {
 
 const refreshSectionOptions = () => {
     const sectionFilter = document.getElementById('section-filter');
+    if (!sectionFilter) return;
     sectionFilter.innerHTML = '<option value="">Todas</option>';
     const filtered = state.gradeId
         ? state.sections.filter((section) => String(section.grado_id) === state.gradeId)
@@ -391,6 +394,7 @@ const refreshSectionOptions = () => {
 
 const loadAddresses = async () => {
     const dirContainer = document.getElementById('direcciones-container');
+    if (!dirContainer) return;
     const res = await fetch(`${API_URL}/admin/direcciones?usuario_id=${state.user.id}`);
     const rows = await res.json();
     if (!rows.length) {
@@ -423,6 +427,7 @@ const loadAddresses = async () => {
 
 const loadContacts = async () => {
     const box = document.getElementById('contactos-container');
+    if (!box) return;
     const res = await fetch(`${API_URL}/admin/contactos?usuario_id=${state.user.id}`);
     const rows = await res.json();
     if (!rows.length) {
@@ -442,17 +447,19 @@ const loadContacts = async () => {
 
 const loadUsers = async () => {
     const box = document.getElementById('users-container');
+    if (!box) return;
     const res = await fetch(`${API_URL}/admin/usuarios?usuario_id=${state.user.id}`);
     const rows = await res.json();
     if (!rows.length) {
         box.innerHTML = '<p class="empty-state">Sin usuarios.</p>';
         return;
     }
-    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Rol</th><th>Acción</th></tr></thead><tbody>';
+    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Correo</th><th>Rol</th><th>Acción</th></tr></thead><tbody>';
     rows.forEach((row) => {
         html += `<tr>
             <td>${row.nombre} ${row.apellido}</td>
             <td>${row.cedula}</td>
+            <td>${row.email || '—'}</td>
             <td>${row.rol_nombre}</td>
             <td><button type="button" class="btn btn-outline btn-sm reset-pass-btn" data-id="${row.id}">Cambiar clave</button></td>
         </tr>`;
@@ -474,10 +481,10 @@ const loadUsers = async () => {
 };
 
 const loadInstitutionConfig = async () => {
+    const nameInput = document.getElementById('institution-name');
+    if (!nameInput) return;
     const config = await fetchJson(`${API_URL}/admin/configuracion/institucion?usuario_id=${state.user.id}`);
-    document.getElementById('institution-name').value = config.nombre || '';
-    document.getElementById('institution-primary').value = config.color_primario || '#0d5c63';
-    document.getElementById('institution-secondary').value = config.color_secundario || '#e07a5f';
+    nameInput.value = config.nombre || '';
     const preview = document.getElementById('institution-logo-preview');
     if (config.logo_url) {
         preview.src = window.resolveAssetUrl(config.logo_url);
@@ -486,16 +493,7 @@ const loadInstitutionConfig = async () => {
         preview.removeAttribute('src');
         preview.hidden = true;
     }
-    if (config.color_primario) {
-        document.documentElement.style.setProperty('--color-primary', config.color_primario);
-    }
-    if (config.color_secundario) {
-        document.documentElement.style.setProperty('--color-accent', config.color_secundario);
-    }
-    if (config.nombre) {
-        const brand = document.querySelector('.brand-name');
-        if (brand) brand.textContent = config.nombre;
-    }
+    if (window.applyInstitutionTheme) window.applyInstitutionTheme(config);
 };
 
 const saveInstitutionConfig = async (e) => {
@@ -518,8 +516,6 @@ const saveInstitutionConfig = async (e) => {
     const payload = {
         usuario_id: state.user.id,
         nombre: document.getElementById('institution-name').value.trim(),
-        color_primario: document.getElementById('institution-primary').value,
-        color_secundario: document.getElementById('institution-secondary').value,
     };
     const res = await fetch(`${API_URL}/admin/configuracion/institucion`, {
         method: 'PUT',
@@ -531,12 +527,15 @@ const saveInstitutionConfig = async (e) => {
         showToast(msg, 'error');
         return;
     }
+    const saved = await res.json();
     document.getElementById('institution-logo-file').value = '';
     await loadInstitutionConfig();
+    if (window.applyInstitutionTheme) window.applyInstitutionTheme(saved);
     showToast('Configuración de institución guardada', 'success');
 };
 
 const loadRepresentatives = async (query = '') => {
+    if (!document.getElementById('operator-rep-select')) return;
     const params = new URLSearchParams({ usuario_id: String(state.user.id) });
     if (query) params.set('q', query);
     const rows = await fetchJson(`${API_URL}/admin/representantes?${params.toString()}`);
@@ -552,7 +551,9 @@ const loadRepresentatives = async (query = '') => {
 
 const updateOperatorRepresentativeInfo = () => {
     const info = document.getElementById('operator-rep-info');
-    const selectedId = document.getElementById('operator-rep-select').value;
+    if (!info) return;
+    const select = document.getElementById('operator-rep-select');
+    const selectedId = select ? select.value : '';
     const representative = state.representatives.find((row) => String(row.id) === selectedId);
     if (!representative) {
         info.hidden = true;
@@ -618,6 +619,7 @@ const submitOperatorPreEnrollment = async (e) => {
 
 const loadTeachers = async () => {
     const box = document.getElementById('teachers-container');
+    if (!box) return;
     const res = await fetch(`${API_URL}/admin/docentes?usuario_id=${state.user.id}`);
     const rows = await res.json();
     if (!rows.length) {
@@ -672,30 +674,30 @@ const saveTeacher = async (e) => {
     loadTeachers();
 };
 
-const bindEvents = () => {
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        localStorage.removeItem('usuario');
-        window.location.href = '../login/login.html';
-    });
+const on = (id, event, handler) => {
+    const node = document.getElementById(id);
+    if (node) node.addEventListener(event, handler);
+};
 
-    document.getElementById('grade-filter').addEventListener('change', (e) => {
+const bindEvents = () => {
+    on('grade-filter', 'change', (e) => {
         state.gradeId = e.target.value;
         state.sectionId = '';
         refreshSectionOptions();
         state.page = 1;
         loadEnrollmentGrid();
     });
-    document.getElementById('section-filter').addEventListener('change', (e) => {
+    on('section-filter', 'change', (e) => {
         state.sectionId = e.target.value;
         state.page = 1;
         loadEnrollmentGrid();
     });
-    document.getElementById('period-filter').addEventListener('change', (e) => {
+    on('period-filter', 'change', (e) => {
         state.periodId = e.target.value;
         state.page = 1;
         loadEnrollmentGrid();
     });
-    document.getElementById('search-filter').addEventListener('input', (e) => {
+    on('search-filter', 'input', (e) => {
         state.query = e.target.value.trim();
         state.page = 1;
         loadEnrollmentGrid();
@@ -711,42 +713,42 @@ const bindEvents = () => {
         });
     });
 
-    document.getElementById('modal-close-btn').addEventListener('click', closeEnrollmentModal);
-    document.getElementById('enrollment-modal-backdrop').addEventListener('click', (e) => {
+    on('modal-close-btn', 'click', closeEnrollmentModal);
+    on('enrollment-modal-backdrop', 'click', (e) => {
         if (e.target.id === 'enrollment-modal-backdrop') closeEnrollmentModal();
     });
-    document.getElementById('modal-approve-btn').addEventListener('click', () => {
+    on('modal-approve-btn', 'click', () => {
         if (!state.selectedEnrollmentId) return;
         updateEnrollmentStatus(state.selectedEnrollmentId, 'aprobada');
     });
-    document.getElementById('modal-reject-btn').addEventListener('click', () => {
+    on('modal-reject-btn', 'click', () => {
         if (!state.selectedEnrollmentId) return;
         updateEnrollmentStatus(state.selectedEnrollmentId, 'rechazada');
     });
-    document.getElementById('export-csv-btn').addEventListener('click', exportEnrollmentCsv);
-    document.getElementById('print-grid-btn').addEventListener('click', printEnrollmentGrid);
-    document.getElementById('modal-upload-docs-btn').addEventListener('click', uploadModalDocuments);
-    document.getElementById('institution-form').addEventListener('submit', saveInstitutionConfig);
-    document.getElementById('teacher-form').addEventListener('submit', saveTeacher);
-    document.getElementById('operator-form').addEventListener('submit', submitOperatorPreEnrollment);
-    document.getElementById('operator-rep-select').addEventListener('change', updateOperatorRepresentativeInfo);
-    document.getElementById('operator-grade-select').addEventListener('change', () => {
+    on('export-csv-btn', 'click', exportEnrollmentCsv);
+    on('print-grid-btn', 'click', printEnrollmentGrid);
+    on('modal-upload-docs-btn', 'click', uploadModalDocuments);
+    on('institution-form', 'submit', saveInstitutionConfig);
+    on('teacher-form', 'submit', saveTeacher);
+    on('operator-form', 'submit', submitOperatorPreEnrollment);
+    on('operator-rep-select', 'change', updateOperatorRepresentativeInfo);
+    on('operator-grade-select', 'change', () => {
         refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección');
     });
-    document.getElementById('teacher-grade-select').addEventListener('change', () => {
+    on('teacher-grade-select', 'change', () => {
         refreshNamedSectionSelect('teacher-grade-select', 'teacher-section-select', 'Sin asignar');
     });
     let representativeSearchTimer = null;
-    document.getElementById('operator-rep-search').addEventListener('input', (e) => {
+    on('operator-rep-search', 'input', (e) => {
         clearTimeout(representativeSearchTimer);
         representativeSearchTimer = setTimeout(() => {
             loadRepresentatives(e.target.value.trim()).then(updateOperatorRepresentativeInfo);
         }, 250);
     });
-    document.getElementById('institution-logo-file').addEventListener('change', (e) => {
+    on('institution-logo-file', 'change', (e) => {
         const file = e.target.files[0];
         const preview = document.getElementById('institution-logo-preview');
-        if (!file) return;
+        if (!file || !preview) return;
         preview.src = URL.createObjectURL(file);
         preview.hidden = false;
     });
@@ -759,7 +761,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    document.getElementById('user-greeting').textContent = state.user.nombre;
+    const greeting = document.getElementById('user-greeting');
+    if (greeting) greeting.textContent = state.user.nombre;
+
+    const showAdminPanel = (panelId) => {
+        const valid = ['inscripciones', 'preinscribir', 'docentes', 'direcciones', 'mensajes', 'configuracion'];
+        const id = valid.includes(panelId) ? panelId : 'inscripciones';
+        document.querySelectorAll('.admin-panel').forEach((panel) => {
+            panel.classList.toggle('is-active', panel.id === `panel-${id}`);
+        });
+        document.querySelectorAll('[data-panel]').forEach((link) => {
+            link.classList.toggle('active', link.dataset.panel === id);
+            link.classList.toggle('is-active', link.classList.contains('header-config-btn') && id === 'configuracion');
+        });
+        const nextHash = `#${id}`;
+        if (location.hash !== nextHash) {
+            history.replaceState({ panel: id }, '', `${location.pathname}${nextHash}`);
+        }
+        window.scrollTo(0, 0);
+    };
+
+    const mobileNav = document.getElementById('admin-mobile-nav');
+    if (mobileNav && !mobileNav.innerHTML.trim()) {
+        mobileNav.innerHTML = `<ul>
+            <li><button type="button" data-panel="inscripciones">Inscripciones</button></li>
+            <li><button type="button" data-panel="preinscribir">Preinscribir</button></li>
+            <li><button type="button" data-panel="docentes">Docentes</button></li>
+            <li><button type="button" data-panel="direcciones">Direcciones</button></li>
+            <li><button type="button" data-panel="mensajes">Mensajes</button></li>
+        </ul>`;
+    }
+
+    document.querySelectorAll('[data-panel]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showAdminPanel(link.dataset.panel);
+        });
+    });
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('usuario');
+            window.location.href = '../login/login.html';
+        });
+    }
+
+    if (document.querySelector('.admin-panel')) {
+        showAdminPanel((location.hash || '#inscripciones').replace('#', ''));
+        window.addEventListener('popstate', () => {
+            showAdminPanel((location.hash || '#inscripciones').replace('#', ''));
+        });
+    }
+
     bindEvents();
     try {
         await loadCatalogs();

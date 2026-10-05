@@ -17,6 +17,7 @@
         <div class="auth-tabs" role="tablist">
             <button type="button" class="auth-tab active" data-form="login" id="tab-login">Iniciar sesión</button>
             <button type="button" class="auth-tab" data-form="register" id="tab-register">Crear cuenta</button>
+            <button type="button" class="auth-tab" data-form="recover" id="tab-recover">Recuperar clave</button>
         </div>
 
         <form id="login-form" class="auth-form active">
@@ -31,11 +32,15 @@
                 <input type="password" id="login-pass" name="contraseña" placeholder="••••••" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn btn-primary btn-block btn-lg">Ingresar</button>
+            <p class="form-hint" style="text-align:center;margin-top:0.75rem">
+                ¿Olvidaste tu contraseña?
+                <a class="auth-link" href="login.html?form=recover" id="forgot-link">Recuperala acá</a>
+            </p>
         </form>
 
         <form id="register-form" class="auth-form">
             <h2>Crear cuenta</h2>
-            <p class="form-hint">Regístrate para inscribir estudiantes.</p>
+            <p class="form-hint">Regístrate para inscribir estudiantes. El correo sirve para recuperar la contraseña.</p>
             <div class="form-row">
                 <div class="form-field">
                     <label for="reg-nombre">Nombre</label>
@@ -51,10 +56,37 @@
                 <input type="text" id="reg-cedula" name="cedula" required>
             </div>
             <div class="form-field">
+                <label for="reg-email">Correo electrónico</label>
+                <input type="email" id="reg-email" name="email" placeholder="ej. correo@gmail.com" required autocomplete="email">
+                <p class="field-hint">Obligatorio. Se usa para recuperar la contraseña.</p>
+            </div>
+            <div class="form-field">
                 <label for="reg-pass">Contraseña</label>
                 <input type="password" id="reg-pass" name="contraseña" placeholder="Mínimo 3 caracteres" minlength="3" required>
             </div>
             <button type="submit" class="btn btn-accent btn-block btn-lg">Registrarse</button>
+        </form>
+
+        <form id="recover-form" class="auth-form">
+            <h2>Recuperar contraseña</h2>
+            <p class="form-hint">Usá la cédula y el correo con el que te registraste para crear una contraseña nueva.</p>
+            <div class="form-field">
+                <label for="recover-cedula">Cédula</label>
+                <input type="text" id="recover-cedula" name="cedula" required>
+            </div>
+            <div class="form-field">
+                <label for="recover-email">Correo electrónico</label>
+                <input type="email" id="recover-email" name="email" required>
+            </div>
+            <div class="form-field">
+                <label for="recover-pass">Nueva contraseña</label>
+                <input type="password" id="recover-pass" name="nueva_contraseña" minlength="3" required>
+            </div>
+            <div class="form-field">
+                <label for="recover-pass-2">Repetir contraseña</label>
+                <input type="password" id="recover-pass-2" minlength="3" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">Guardar contraseña nueva</button>
         </form>
     </main>
 
