@@ -11,6 +11,7 @@ const MIGRATIONS = [
     '006_configuracion_institucion_docentes.sql',
     '007_documentos_requeridos_y_seguridad.sql',
     '008_preescolar_logo_docentes.sql',
+    '009_email_usuario.sql',
 ];
 
 const run = async () => {

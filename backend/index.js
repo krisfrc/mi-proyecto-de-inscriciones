@@ -655,18 +655,30 @@ app.get('/estudiantes', async (req, res) => {
 
 // --- 1. RUTAS DE USUARIO & LOGIN ---
 
+const publicUser = (user) => {
+    if (!user) return user;
+    const { contraseña, ...safeUser } = user;
+    return safeUser;
+};
+
 app.post('/usuarios', async (req, res) => {
-    const { nombre, apellido, cedula, contraseña } = req.body;
+    const { nombre, apellido, cedula, contraseña, email } = req.body;
+    if (!email || !String(email).includes('@')) {
+        return res.status(400).json({ error: 'El correo electrónico es obligatorio' });
+    }
     try {
         const passwordHash = await bcrypt.hash(contraseña, 10);
         const result = await pool.query(
-            `INSERT INTO usuarios (nombre, apellido, cedula, contraseña, rol_id) 
-             VALUES ($1, $2, $3, $4, 2) RETURNING id, cedula, nombre`,
-            [nombre, apellido, cedula, passwordHash]
+            `INSERT INTO usuarios (nombre, apellido, cedula, contraseña, rol_id, email)
+             VALUES ($1, $2, $3, $4, 2, $5) RETURNING id, cedula, nombre, apellido, email, rol_id`,
+            [nombre, apellido, cedula, passwordHash, String(email).trim()]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
-        res.status(500).json({ error: "Error al registrar: " + err.message });
+        if (err.code === '23505') {
+            return res.status(400).json({ error: 'La cédula o el correo ya están registrados' });
+        }
+        res.status(500).json({ error: 'Error al registrar: ' + err.message });
     }
 });
 
@@ -693,8 +705,85 @@ app.post('/login', async (req, res) => {
             await pool.query('UPDATE usuarios SET contraseña = $1 WHERE id = $2', [migratedHash, user.id]);
             user.contraseña = migratedHash;
         }
-        res.json({ message: "Login exitoso", usuario: user });
+        res.json({ message: 'Login exitoso', usuario: publicUser(user) });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/recuperar-contrasena', async (req, res) => {
+    const { cedula, email, nueva_contraseña } = req.body;
+    if (!cedula || !email || !nueva_contraseña || String(nueva_contraseña).length < 3) {
+        return res.status(400).json({ error: 'Cédula, correo y una contraseña nueva de al menos 3 caracteres son obligatorios' });
+    }
+    try {
+        const result = await pool.query(
+            `SELECT id FROM usuarios
+             WHERE cedula = $1
+               AND email IS NOT NULL
+               AND LOWER(BTRIM(email)) = LOWER(BTRIM($2))`,
+            [cedula, email]
+        );
+        if (!result.rows.length) {
+            return res.status(400).json({ error: 'Cédula y correo no coinciden. Si no cargaste correo, pedile el cambio al administrador.' });
+        }
+        const hash = await bcrypt.hash(String(nueva_contraseña), 10);
+        await pool.query('UPDATE usuarios SET contraseña = $1 WHERE id = $2', [hash, result.rows[0].id]);
+        res.json({ message: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.patch('/usuarios/:id/perfil', async (req, res) => {
+    const { id } = req.params;
+    const { usuario_id, nombre, apellido, email, contraseña } = req.body;
+    if (!usuario_id) {
+        return res.status(403).json({ error: 'Se requiere identificación del usuario' });
+    }
+    try {
+        const actor = await pool.query('SELECT id, rol_id FROM usuarios WHERE id = $1', [usuario_id]);
+        if (!actor.rows.length) {
+            return res.status(403).json({ error: 'Usuario no válido' });
+        }
+        const isAdmin = Number(actor.rows[0].rol_id) === 1;
+        if (!isAdmin && Number(id) !== Number(usuario_id)) {
+            return res.status(403).json({ error: 'No puedes editar la cuenta de otra persona' });
+        }
+        if (email && !String(email).includes('@')) {
+            return res.status(400).json({ error: 'El correo electrónico no es válido' });
+        }
+        const current = await pool.query('SELECT * FROM usuarios WHERE id = $1', [id]);
+        if (!current.rows.length) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        const nextName = nombre != null ? String(nombre).trim() : current.rows[0].nombre;
+        const nextLastName = apellido != null ? String(apellido).trim() : current.rows[0].apellido;
+        const nextEmail = email != null ? String(email).trim() : current.rows[0].email;
+        if (contraseña && String(contraseña).length >= 3) {
+            const hash = await bcrypt.hash(String(contraseña), 10);
+            await pool.query(
+                `UPDATE usuarios SET nombre = $1, apellido = $2, email = $3, contraseña = $4 WHERE id = $5`,
+                [nextName, nextLastName, nextEmail || null, hash, id]
+            );
+        } else {
+            await pool.query(
+                `UPDATE usuarios SET nombre = $1, apellido = $2, email = $3 WHERE id = $4`,
+                [nextName, nextLastName, nextEmail || null, id]
+            );
+        }
+        const updated = await pool.query(
+            `SELECT u.id, u.nombre, u.apellido, u.cedula, u.email, u.rol_id, r.nombre AS rol_nombre
+             FROM usuarios u
+             JOIN roles r ON r.id = u.rol_id
+             WHERE u.id = $1`,
+            [id]
+        );
+        res.json(updated.rows[0]);
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ error: 'Ese correo ya está registrado' });
+        }
         res.status(500).json({ error: err.message });
     }
 });
@@ -755,7 +844,73 @@ app.post('/estudiantes', async (req, res) => {
     }
 });
 
-// --- 3. RUTAS PARA DIRECCIONES ---
+app.patch('/estudiantes/:id', async (req, res) => {
+    const { id } = req.params;
+    const { usuario_id, nombre, grado, grado_id, seccion_id, cedula } = req.body;
+    if (!usuario_id) {
+        return res.status(403).json({ error: 'Se requiere identificación del usuario' });
+    }
+    let client;
+    try {
+        client = await pool.connect();
+        const actor = await client.query('SELECT id, rol_id FROM usuarios WHERE id = $1', [usuario_id]);
+        if (!actor.rows.length) {
+            return res.status(403).json({ error: 'Usuario no válido' });
+        }
+        const isAdmin = Number(actor.rows[0].rol_id) === 1;
+        const student = await client.query('SELECT * FROM estudiantes WHERE id = $1', [id]);
+        if (!student.rows.length) {
+            return res.status(404).json({ error: 'Estudiante no encontrado' });
+        }
+        if (!isAdmin && Number(student.rows[0].usuario_id) !== Number(usuario_id)) {
+            return res.status(403).json({ error: 'No puedes corregir un estudiante de otro representante' });
+        }
+        const enrollment = await client.query(
+            `SELECT estado FROM inscripciones WHERE estudiante_id = $1 ORDER BY id DESC LIMIT 1`,
+            [id]
+        );
+        if (!isAdmin && enrollment.rows[0]?.estado === 'aprobada') {
+            return res.status(400).json({ error: 'El alumno ya está inscrito. Pedile la corrección al administrador.' });
+        }
+        const { gradeText, resolvedGradeId, resolvedSectionId } = await resolveGradeAndSection(client, {
+            grado,
+            grado_id,
+            seccion_id,
+        });
+        const nextCedula = cedula && String(cedula).trim()
+            ? String(cedula).trim()
+            : student.rows[0].cedula;
+        const result = await client.query(
+            `UPDATE estudiantes
+             SET nombre = COALESCE($1, nombre),
+                 grado = COALESCE($2, grado),
+                 grado_id = COALESCE($3, grado_id),
+                 seccion_id = COALESCE($4, seccion_id),
+                 cedula = $5
+             WHERE id = $6
+             RETURNING *`,
+            [
+                nombre ? String(nombre).trim() : null,
+                gradeText,
+                resolvedGradeId,
+                resolvedSectionId,
+                nextCedula,
+                id,
+            ]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        if (err.statusCode) {
+            return res.status(err.statusCode).json({ error: err.message });
+        }
+        if (err.code === '23505') {
+            return res.status(400).json({ error: 'La cédula del estudiante ya existe.' });
+        }
+        res.status(500).json({ error: err.message });
+    } finally {
+        if (client) client.release();
+    }
+});
 
 app.get('/direcciones/usuario', async (req, res) => {
     const { usuario_id } = req.query;
@@ -778,6 +933,47 @@ app.post('/direcciones', async (req, res) => {
             [calle, av || '', barrioVal, n_casa, parroquia, municipio, estadoVal, id_user]
         );
         res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.patch('/direcciones/:id', async (req, res) => {
+    const { id } = req.params;
+    const { calle, av, barrio, sector, n_casa, parroquia, municipio, estado, state, id_user, usuario_id } = req.body;
+    const actorId = id_user || usuario_id;
+    if (!actorId) {
+        return res.status(403).json({ error: 'Se requiere identificación del usuario' });
+    }
+    try {
+        const actor = await pool.query('SELECT rol_id FROM usuarios WHERE id = $1', [actorId]);
+        const isAdmin = actor.rows[0] && Number(actor.rows[0].rol_id) === 1;
+        const current = await pool.query('SELECT * FROM direcciones WHERE id = $1', [id]);
+        if (!current.rows.length) {
+            return res.status(404).json({ error: 'Dirección no encontrada' });
+        }
+        if (!isAdmin && Number(current.rows[0].id_user) !== Number(actorId)) {
+            return res.status(403).json({ error: 'No puedes corregir la dirección de otro representante' });
+        }
+        const barrioVal = barrio || sector || current.rows[0].barrio;
+        const estadoVal = estado || state || current.rows[0].estado;
+        const result = await pool.query(
+            `UPDATE direcciones
+             SET calle = $1, av = $2, barrio = $3, n_casa = $4, parroquia = $5, municipio = $6, estado = $7
+             WHERE id = $8
+             RETURNING *`,
+            [
+                calle ?? current.rows[0].calle,
+                av ?? current.rows[0].av,
+                barrioVal,
+                n_casa ?? current.rows[0].n_casa,
+                parroquia ?? current.rows[0].parroquia,
+                municipio ?? current.rows[0].municipio,
+                estadoVal,
+                id,
+            ]
+        );
+        res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -972,7 +1168,7 @@ app.get('/inscripciones/usuario', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT i.id, i.estado, i.fecha, i.observaciones,
-                   e.nombre as estudiante_nombre, COALESCE(g.nombre, e.grado) AS grado,
+                   e.id as estudiante_id, e.nombre as estudiante_nombre, COALESCE(g.nombre, e.grado) AS grado,
                    s.nombre AS seccion
             FROM inscripciones i
             JOIN estudiantes e ON i.estudiante_id = e.id
@@ -984,6 +1180,77 @@ app.get('/inscripciones/usuario', async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/inscripciones/:id/documentos', async (req, res) => {
+    const { id } = req.params;
+    const usuarioId = Number(req.query.usuario_id);
+    try {
+        const enrollment = await pool.query('SELECT id, usuario_id FROM inscripciones WHERE id = $1', [id]);
+        if (!enrollment.rows.length) {
+            return res.status(404).json({ error: 'Inscripción no encontrada' });
+        }
+        const user = await pool.query('SELECT rol_id FROM usuarios WHERE id = $1', [usuarioId]);
+        const isAdmin = user.rows.length && Number(user.rows[0].rol_id) === 1;
+        if (!isAdmin && Number(enrollment.rows[0].usuario_id) !== usuarioId) {
+            return res.status(403).json({ error: 'No autorizado' });
+        }
+        const result = await pool.query(
+            `SELECT id, nombre_archivo, ruta_archivo, tipo_documento, codigo_documento, creado_en
+             FROM preinscripcion_documentos
+             WHERE inscripcion_id = $1
+             ORDER BY creado_en DESC`,
+            [id]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/inscripciones/:id/reenviar', async (req, res) => {
+    const { id } = req.params;
+    const { usuario_id } = req.body;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const enrollment = await client.query('SELECT id, usuario_id, estado FROM inscripciones WHERE id = $1', [id]);
+        if (!enrollment.rows.length) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Inscripción no encontrada' });
+        }
+        if (Number(enrollment.rows[0].usuario_id) !== Number(usuario_id)) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: 'No autorizado' });
+        }
+        if (enrollment.rows[0].estado === 'aprobada') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'La inscripción ya fue aprobada' });
+        }
+        const previous = enrollment.rows[0].estado;
+        const result = await client.query(
+            `UPDATE inscripciones
+             SET estado = 'pendiente', actualizado_en = CURRENT_TIMESTAMP
+             WHERE id = $1
+             RETURNING *`,
+            [id]
+        );
+        await recordEnrollmentHistory(
+            client,
+            id,
+            previous,
+            'pendiente',
+            usuario_id,
+            'Representante reenvió la preinscripción con correcciones'
+        );
+        await client.query('COMMIT');
+        res.json(result.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
     }
 });
 
@@ -1030,7 +1297,7 @@ app.get('/admin/contactos', checkAdminRead, async (req, res) => {
 app.get('/admin/usuarios', checkAdminRead, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT u.id, u.nombre, u.apellido, u.cedula, u.rol_id, r.nombre AS rol_nombre
+            `SELECT u.id, u.nombre, u.apellido, u.cedula, u.email, u.rol_id, r.nombre AS rol_nombre
              FROM usuarios u
              JOIN roles r ON r.id = u.rol_id
              ORDER BY u.id DESC`
@@ -1077,18 +1344,20 @@ app.get('/admin/configuracion/institucion', checkAdminRead, async (_req, res) =>
 });
 
 app.put('/admin/configuracion/institucion', checkAdminUpdate, async (req, res) => {
-    const { nombre, logo_url, color_primario, color_secundario } = req.body;
+    const { nombre, logo_url } = req.body;
     if (!nombre || !String(nombre).trim()) {
         return res.status(400).json({ error: 'El nombre de la institución es obligatorio' });
     }
     try {
         const current = await pool.query('SELECT * FROM institucion_config ORDER BY id ASC LIMIT 1');
         const nextLogo = logo_url !== undefined ? (logo_url || null) : (current.rows[0]?.logo_url || null);
+        const nextPrimary = current.rows[0]?.color_primario || '#003DA5';
+        const nextSecondary = current.rows[0]?.color_secundario || '#CE1126';
         if (!current.rows.length) {
             const created = await pool.query(
                 `INSERT INTO institucion_config (nombre, logo_url, color_primario, color_secundario)
                  VALUES ($1, $2, $3, $4) RETURNING *`,
-                [nombre.trim(), nextLogo, color_primario || '#0d5c63', color_secundario || '#e07a5f']
+                [nombre.trim(), nextLogo, '#003DA5', '#CE1126']
             );
             return res.json(created.rows[0]);
         }
@@ -1104,8 +1373,8 @@ app.put('/admin/configuracion/institucion', checkAdminUpdate, async (req, res) =
             [
                 nombre.trim(),
                 nextLogo,
-                color_primario || '#0d5c63',
-                color_secundario || '#e07a5f',
+                nextPrimary,
+                nextSecondary,
                 current.rows[0].id,
             ]
         );
