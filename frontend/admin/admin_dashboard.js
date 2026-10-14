@@ -16,6 +16,8 @@ const state = {
     selectedEnrollmentId: null,
 };
 
+const grids = {};
+
 const renderStatusBadge = (status) => {
     const label = (status || 'pendiente').replace('_', ' ');
     return `<span class="badge badge-${status || 'pendiente'}">${label}</span>`;
@@ -75,15 +77,26 @@ const renderPagination = (pagination) => {
     });
 };
 
+const setEnrollmentToolbar = (row) => {
+    const has = Boolean(row);
+    const viewBtn = document.getElementById('enrollment-view-btn');
+    const approveBtn = document.getElementById('enrollment-approve-btn');
+    const rejectBtn = document.getElementById('enrollment-reject-btn');
+    if (viewBtn) viewBtn.disabled = !has;
+    if (approveBtn) approveBtn.disabled = !has || row.estado === 'aprobada';
+    if (rejectBtn) rejectBtn.disabled = !has || row.estado === 'rechazada';
+};
+
 const renderEnrollmentRows = (rows) => {
     if (!rows.length) {
         return '<p class="empty-state">No hay resultados con esos filtros.</p>';
     }
-    let html = `<div class="table-wrapper"><table class="data-table"><thead><tr>
-        <th>ID</th><th>Representante</th><th>Cédula</th><th>Estudiante</th><th>Grado</th><th>Sección</th><th>Estado</th><th>Acciones</th>
+    let html = `<div class="table-responsive data-grid-wrap"><table class="table table-striped table-hover table-sm align-middle data-grid"><thead class="table-light"><tr>
+        <th>ID</th><th>Representante</th><th>Cédula</th><th>Estudiante</th><th>Grado</th><th>Sección</th><th>Estado</th>
     </tr></thead><tbody>`;
     rows.forEach((row) => {
-        html += `<tr>
+        const selected = Number(state.selectedEnrollmentId) === Number(row.id);
+        html += `<tr data-id="${row.id}" class="${selected ? 'table-primary is-selected' : ''}">
             <td>${row.id}</td>
             <td>${row.usuario_nombre} ${row.usuario_apellido}</td>
             <td>${row.usuario_cedula}</td>
@@ -91,10 +104,6 @@ const renderEnrollmentRows = (rows) => {
             <td>${row.grado_nombre || '—'}</td>
             <td>${row.seccion_nombre || '—'}</td>
             <td>${renderStatusBadge(row.estado)}</td>
-            <td class="table-actions">
-                <button class="btn btn-outline btn-sm detail-btn" type="button" data-id="${row.id}">Ver</button>
-                <button class="btn btn-outline btn-sm history-btn" type="button" data-id="${row.id}">Historial</button>
-            </td>
         </tr>`;
     });
     return html + '</tbody></table></div>';
@@ -109,12 +118,16 @@ const loadEnrollmentGrid = async () => {
         const response = await fetchJson(`${API_URL}/admin/inscripciones?${params.toString()}`);
         container.innerHTML = renderEnrollmentRows(response.rows);
         renderPagination(response.pagination);
-
-        container.querySelectorAll('.detail-btn').forEach((btn) => {
-            btn.addEventListener('click', () => openEnrollmentModal(btn.dataset.id));
-        });
-        container.querySelectorAll('.history-btn').forEach((btn) => {
-            btn.addEventListener('click', () => showEnrollmentHistory(btn.dataset.id));
+        state.enrollmentRows = response.rows || [];
+        setEnrollmentToolbar(state.enrollmentRows.find((row) => Number(row.id) === Number(state.selectedEnrollmentId)) || null);
+        container.querySelectorAll('tbody tr').forEach((tr) => {
+            tr.addEventListener('click', () => {
+                state.selectedEnrollmentId = Number(tr.dataset.id);
+                const row = state.enrollmentRows.find((item) => Number(item.id) === state.selectedEnrollmentId);
+                setEnrollmentToolbar(row);
+                container.querySelectorAll('tbody tr').forEach((el) => el.classList.toggle('is-selected', el === tr));
+                container.querySelectorAll('tbody tr').forEach((el) => el.classList.toggle('table-primary', el === tr));
+            });
         });
     } catch (err) {
         console.error(err);
@@ -166,13 +179,16 @@ const showEnrollmentHistory = async (id) => {
         const date = new Date(h.creado_en).toLocaleString('es');
         return `${date}: ${h.estado_anterior || '—'} → ${h.estado_nuevo}${h.nota ? ` (${h.nota})` : ''}`;
     }).join('\n');
-    alert(text || 'Sin historial');
+    showAlert(text || 'Sin historial', 'Historial');
 };
 
 const updateEnrollmentStatus = async (enrollmentId, status) => {
-    const note = status === 'rechazada'
-        ? prompt('Motivo del rechazo (opcional):') || ''
-        : '';
+    let note = '';
+    if (status === 'rechazada') {
+        const typed = await showPrompt('Motivo del rechazo (opcional):', 'Rechazar inscripción');
+        if (typed === null) return;
+        note = typed;
+    }
     const res = await fetch(`${API_URL}/inscripciones/${enrollmentId}/estado`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -282,7 +298,7 @@ const closeEnrollmentModal = () => {
     state.selectedEnrollmentId = null;
 };
 
-const fillSelect = (select, items, getValue, getLabel, placeholder) => {
+const fillSelect = (select, items, getValue, getLabel, placeholder, getDisabled) => {
     if (!select) return;
     const current = select.value;
     select.innerHTML = `<option value="">${placeholder}</option>`;
@@ -290,6 +306,9 @@ const fillSelect = (select, items, getValue, getLabel, placeholder) => {
         const opt = document.createElement('option');
         opt.value = String(getValue(item));
         opt.textContent = getLabel(item);
+        if (typeof getDisabled === 'function' && getDisabled(item)) {
+            opt.disabled = true;
+        }
         select.appendChild(opt);
     });
     if (current && Array.from(select.options).some((opt) => opt.value === current)) {
@@ -297,7 +316,22 @@ const fillSelect = (select, items, getValue, getLabel, placeholder) => {
     }
 };
 
-const refreshNamedSectionSelect = (gradeSelectId, sectionSelectId, placeholder) => {
+const updateOperatorCupoHint = () => {
+    const hint = document.getElementById('operator-cupo-hint');
+    const sectionSelect = document.getElementById('operator-section-select');
+    if (!hint || !sectionSelect) return;
+    const section = state.sections.find((item) => String(item.id) === sectionSelect.value);
+    if (!section) {
+        hint.textContent = 'Cada aula tiene un cupo máximo.';
+        return;
+    }
+    const quota = window.formatSectionQuota(section);
+    hint.textContent = quota.full
+        ? `Sin cupo: ${quota.ocupados} de ${quota.cupo} lugares ocupados.`
+        : `Disponibles: ${quota.disponibles} de ${quota.cupo} cupos.`;
+};
+
+const refreshNamedSectionSelect = (gradeSelectId, sectionSelectId, placeholder, withQuota = false) => {
     const gradeSelect = document.getElementById(gradeSelectId);
     const sectionSelect = document.getElementById(sectionSelectId);
     if (!gradeSelect || !sectionSelect) return;
@@ -305,7 +339,18 @@ const refreshNamedSectionSelect = (gradeSelectId, sectionSelectId, placeholder) 
     const filtered = gradeId
         ? state.sections.filter((section) => String(section.grado_id) === gradeId)
         : [];
-    fillSelect(sectionSelect, filtered, (item) => item.id, (item) => item.nombre, placeholder);
+    fillSelect(
+        sectionSelect,
+        filtered,
+        (item) => item.id,
+        (item) => (withQuota ? window.formatSectionQuota(item).label : item.nombre),
+        placeholder,
+        withQuota ? (item) => window.formatSectionQuota(item).full : undefined
+    );
+    if (!sectionSelect.value && filtered.length === 1) {
+        sectionSelect.value = String(filtered[0].id);
+    }
+    if (withQuota) updateOperatorCupoHint();
 };
 
 const loadCatalogs = async () => {
@@ -338,6 +383,7 @@ const loadCatalogs = async () => {
         (grade) => grade.nombre,
         'Sin asignar'
     );
+    if (grids.cupos) grids.cupos.setRows(state.sections || []);
 
     const periodOptions = data.periodos.map((period) => ({
         ...period,
@@ -397,32 +443,47 @@ const loadAddresses = async () => {
     if (!dirContainer) return;
     const res = await fetch(`${API_URL}/admin/direcciones?usuario_id=${state.user.id}`);
     const rows = await res.json();
-    if (!rows.length) {
-        dirContainer.innerHTML = '<p class="empty-state">Sin direcciones.</p>';
+    if (grids.addresses) {
+        grids.addresses.setRows(rows || []);
         return;
     }
-    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Usuario</th><th>Barrio</th><th>Municipio</th><th>Estado</th><th></th></tr></thead><tbody>';
-    rows.forEach((row) => {
-        html += `<tr>
-            <td>${row.usuario_nombre} ${row.usuario_apellido}</td>
-            <td>${row.barrio || '—'}</td>
-            <td>${row.municipio || '—'}</td>
-            <td>${row.estado || '—'}</td>
-            <td><button class="btn btn-danger btn-sm delete-dir-btn" type="button" data-id="${row.id}">Borrar</button></td>
-        </tr>`;
+    dirContainer.innerHTML = rows.length
+        ? rows.map((row) => `${row.usuario_nombre} — ${row.barrio || '—'}`).join('<br>')
+        : '<p class="empty-state">Sin direcciones.</p>';
+};
+
+const loadAvisos = async () => {
+    const box = document.getElementById('avisos-container');
+    if (!box) return;
+    const res = await fetch(`${API_URL}/admin/avisos?usuario_id=${state.user.id}`);
+    const rows = await res.json();
+    if (grids.avisos) {
+        grids.avisos.setRows(rows || []);
+        return;
+    }
+    box.innerHTML = '<p class="empty-state">Sin avisos enviados.</p>';
+};
+
+const saveAviso = async (e) => {
+    e.preventDefault();
+    const payload = {
+        usuario_id: state.user.id,
+        titulo: document.getElementById('aviso-titulo').value.trim(),
+        mensaje: document.getElementById('aviso-mensaje').value.trim(),
+    };
+    const res = await fetch(`${API_URL}/admin/avisos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
     });
-    dirContainer.innerHTML = html + '</tbody></table></div>';
-    dirContainer.querySelectorAll('.delete-dir-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            if (!confirm('¿Eliminar dirección?')) return;
-            await fetch(`${API_URL}/direcciones/${btn.dataset.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_user: state.user.id }),
-            });
-            loadAddresses();
-        });
-    });
+    if (!res.ok) {
+        const msg = await parseResponseError(res, 'No se pudo enviar el aviso');
+        showToast(msg, 'error');
+        return;
+    }
+    e.target.reset();
+    showToast('Aviso enviado a todos los representantes', 'success');
+    loadAvisos();
 };
 
 const loadContacts = async () => {
@@ -430,19 +491,11 @@ const loadContacts = async () => {
     if (!box) return;
     const res = await fetch(`${API_URL}/admin/contactos?usuario_id=${state.user.id}`);
     const rows = await res.json();
-    if (!rows.length) {
-        box.innerHTML = '<p class="empty-state">Sin mensajes.</p>';
+    if (grids.contacts) {
+        grids.contacts.setRows(rows || []);
         return;
     }
-    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Mensaje</th><th>Fecha</th></tr></thead><tbody>';
-    rows.forEach((row) => {
-        html += `<tr>
-            <td>${row.nombre}</td>
-            <td>${row.mensaje}</td>
-            <td>${new Date(row.creado_en).toLocaleString('es')}</td>
-        </tr>`;
-    });
-    box.innerHTML = html + '</tbody></table></div>';
+    box.innerHTML = '<p class="empty-state">Sin mensajes.</p>';
 };
 
 const loadUsers = async () => {
@@ -450,34 +503,11 @@ const loadUsers = async () => {
     if (!box) return;
     const res = await fetch(`${API_URL}/admin/usuarios?usuario_id=${state.user.id}`);
     const rows = await res.json();
-    if (!rows.length) {
-        box.innerHTML = '<p class="empty-state">Sin usuarios.</p>';
+    if (grids.users) {
+        grids.users.setRows(rows || []);
         return;
     }
-    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Correo</th><th>Rol</th><th>Acción</th></tr></thead><tbody>';
-    rows.forEach((row) => {
-        html += `<tr>
-            <td>${row.nombre} ${row.apellido}</td>
-            <td>${row.cedula}</td>
-            <td>${row.email || '—'}</td>
-            <td>${row.rol_nombre}</td>
-            <td><button type="button" class="btn btn-outline btn-sm reset-pass-btn" data-id="${row.id}">Cambiar clave</button></td>
-        </tr>`;
-    });
-    box.innerHTML = html + '</tbody></table></div>';
-    box.querySelectorAll('.reset-pass-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const newPassword = prompt('Nueva contraseña para el usuario:');
-            if (!newPassword) return;
-            const update = await fetch(`${API_URL}/admin/usuarios/${btn.dataset.id}/password`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usuario_id: state.user.id, nueva_contraseña: newPassword }),
-            });
-            if (update.ok) showToast('Contraseña actualizada', 'success');
-            else showToast('No se pudo actualizar la contraseña', 'error');
-        });
-    });
+    box.innerHTML = '<p class="empty-state">Sin usuarios.</p>';
 };
 
 const loadInstitutionConfig = async () => {
@@ -602,7 +632,8 @@ const submitOperatorPreEnrollment = async (e) => {
     }
     e.target.reset();
     updateOperatorRepresentativeInfo();
-    refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección');
+    await loadCatalogs();
+    refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección', true);
     const commitment = state.documentTypes.find((doc) => doc.codigo === 'carta_compromiso');
     if (commitment) {
         const operatorDocType = document.getElementById('operator-doc-code');
@@ -622,34 +653,11 @@ const loadTeachers = async () => {
     if (!box) return;
     const res = await fetch(`${API_URL}/admin/docentes?usuario_id=${state.user.id}`);
     const rows = await res.json();
-    if (!rows.length) {
-        box.innerHTML = '<p class="empty-state">Sin docentes registrados.</p>';
+    if (grids.teachers) {
+        grids.teachers.setRows(rows || []);
         return;
     }
-    let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Especialidad</th><th>Grado / sección</th><th>Contacto</th><th></th></tr></thead><tbody>';
-    rows.forEach((row) => {
-        const assignment = [row.grado_nombre, row.seccion_nombre].filter(Boolean).join(' — ') || 'Sin asignar';
-        html += `<tr>
-            <td>${row.nombre} ${row.apellido}</td>
-            <td>${row.cedula}</td>
-            <td>${row.especialidad || '—'}</td>
-            <td>${assignment}</td>
-            <td>${row.telefono || '—'} ${row.email ? ` / ${row.email}` : ''}</td>
-            <td><button type="button" class="btn btn-danger btn-sm delete-teacher-btn" data-id="${row.id}">Borrar</button></td>
-        </tr>`;
-    });
-    box.innerHTML = html + '</tbody></table></div>';
-    box.querySelectorAll('.delete-teacher-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            if (!confirm('¿Eliminar docente?')) return;
-            await fetch(`${API_URL}/admin/docentes/${btn.dataset.id}?usuario_id=${state.user.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ usuario_id: state.user.id }),
-            });
-            loadTeachers();
-        });
-    });
+    box.innerHTML = '<p class="empty-state">Sin docentes registrados.</p>';
 };
 
 const saveTeacher = async (e) => {
@@ -729,12 +737,14 @@ const bindEvents = () => {
     on('print-grid-btn', 'click', printEnrollmentGrid);
     on('modal-upload-docs-btn', 'click', uploadModalDocuments);
     on('institution-form', 'submit', saveInstitutionConfig);
+    on('aviso-form', 'submit', saveAviso);
     on('teacher-form', 'submit', saveTeacher);
     on('operator-form', 'submit', submitOperatorPreEnrollment);
     on('operator-rep-select', 'change', updateOperatorRepresentativeInfo);
     on('operator-grade-select', 'change', () => {
-        refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección');
+        refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección', true);
     });
+    on('operator-section-select', 'change', updateOperatorCupoHint);
     on('teacher-grade-select', 'change', () => {
         refreshNamedSectionSelect('teacher-grade-select', 'teacher-section-select', 'Sin asignar');
     });
@@ -797,6 +807,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             e.stopPropagation();
             showAdminPanel(link.dataset.panel);
+            const menu = document.getElementById('admin-config-menu');
+            if (menu) menu.hidden = true;
         });
     });
 
@@ -815,16 +827,196 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    bindConfigMenu(document.getElementById('admin-config-toggle'), document.getElementById('admin-config-menu'));
+    document.querySelectorAll('[data-config-goto]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const map = { usuarios: 'config-usuarios', cupos: 'config-cupos', institucion: 'configuraciones' };
+            const target = document.getElementById(map[btn.dataset.configGoto] || 'configuraciones');
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    if (window.createDataGrid) {
+        grids.teachers = createDataGrid({
+            container: document.getElementById('teachers-container'),
+            footer: document.getElementById('teachers-grid-footer'),
+            searchInput: document.getElementById('teachers-search'),
+            emptyText: 'Sin docentes registrados.',
+            columns: [
+                { key: 'nombre', label: 'Nombre', value: (row) => `${row.nombre} ${row.apellido}` },
+                { key: 'cedula', label: 'Cédula' },
+                { key: 'especialidad', label: 'Especialidad', value: (row) => row.especialidad || '—' },
+                { key: 'asignacion', label: 'Grado / sección', value: (row) => [row.grado_nombre, row.seccion_nombre].filter(Boolean).join(' — ') || 'Sin asignar' },
+            ],
+            onSelect: (row) => {
+                const btn = document.getElementById('teacher-delete-btn');
+                if (btn) btn.disabled = !row;
+            },
+        });
+        grids.addresses = createDataGrid({
+            container: document.getElementById('direcciones-container'),
+            footer: document.getElementById('admin-address-footer'),
+            searchInput: document.getElementById('admin-address-search'),
+            emptyText: 'Sin direcciones.',
+            columns: [
+                { key: 'usuario', label: 'Usuario', value: (row) => `${row.usuario_nombre} ${row.usuario_apellido}` },
+                { key: 'barrio', label: 'Barrio', value: (row) => row.barrio || '—' },
+                { key: 'municipio', label: 'Municipio', value: (row) => row.municipio || '—' },
+                { key: 'estado', label: 'Estado', value: (row) => row.estado || '—' },
+            ],
+            onSelect: (row) => {
+                const btn = document.getElementById('admin-address-delete-btn');
+                if (btn) btn.disabled = !row;
+            },
+        });
+        grids.avisos = createDataGrid({
+            container: document.getElementById('avisos-container'),
+            footer: document.getElementById('avisos-grid-footer'),
+            searchInput: document.getElementById('avisos-search'),
+            emptyText: 'Sin avisos enviados.',
+            columns: [
+                { key: 'titulo', label: 'Título' },
+                { key: 'mensaje', label: 'Mensaje' },
+                { key: 'fecha', label: 'Fecha', value: (row) => new Date(row.creado_en).toLocaleString('es') },
+            ],
+        });
+        grids.cupos = createDataGrid({
+            container: document.getElementById('cupos-container'),
+            footer: document.getElementById('cupos-grid-footer'),
+            searchInput: document.getElementById('cupos-search'),
+            emptyText: 'Sin aulas.',
+            columns: [
+                { key: 'grado_nombre', label: 'Grado' },
+                { key: 'nombre', label: 'Aula' },
+                { key: 'cupo', label: 'Cupo' },
+                { key: 'ocupados', label: 'Ocupados' },
+                { key: 'disponibles', label: 'Disponibles' },
+            ],
+            onSelect: (row) => {
+                const btn = document.getElementById('cupo-edit-btn');
+                if (btn) btn.disabled = !row;
+            },
+        });
+        grids.contacts = createDataGrid({
+            container: document.getElementById('contactos-container'),
+            footer: document.getElementById('contacts-grid-footer'),
+            searchInput: document.getElementById('contacts-search'),
+            emptyText: 'Sin mensajes.',
+            columns: [
+                { key: 'nombre', label: 'Nombre' },
+                { key: 'mensaje', label: 'Mensaje' },
+                { key: 'fecha', label: 'Fecha', value: (row) => new Date(row.creado_en).toLocaleString('es') },
+            ],
+        });
+        grids.users = createDataGrid({
+            container: document.getElementById('users-container'),
+            footer: document.getElementById('users-grid-footer'),
+            searchInput: document.getElementById('users-search'),
+            emptyText: 'Sin usuarios.',
+            columns: [
+                { key: 'nombre', label: 'Nombre', value: (row) => `${row.nombre} ${row.apellido}` },
+                { key: 'cedula', label: 'Cédula' },
+                { key: 'email', label: 'Correo', value: (row) => row.email || '—' },
+                { key: 'rol_nombre', label: 'Rol' },
+            ],
+            onSelect: (row) => {
+                const btn = document.getElementById('user-password-btn');
+                if (btn) btn.disabled = !row;
+            },
+        });
+    }
+
+    on('enrollment-view-btn', 'click', () => {
+        if (state.selectedEnrollmentId) openEnrollmentModal(state.selectedEnrollmentId);
+    });
+    on('enrollment-approve-btn', 'click', async () => {
+        if (!state.selectedEnrollmentId) return;
+        const ok = await showConfirm('¿Aprobar esta inscripción?', 'Aprobar');
+        if (ok) updateEnrollmentStatus(state.selectedEnrollmentId, 'aprobada');
+    });
+    on('enrollment-reject-btn', 'click', async () => {
+        if (!state.selectedEnrollmentId) return;
+        const ok = await showConfirm('¿Rechazar esta inscripción?', 'Rechazar');
+        if (ok) updateEnrollmentStatus(state.selectedEnrollmentId, 'rechazada');
+    });
+    on('teacher-delete-btn', 'click', async () => {
+        const row = grids.teachers?.getSelected();
+        if (!row) return;
+        const ok = await showConfirm(`¿Eliminar al docente ${row.nombre} ${row.apellido}?`, 'Borrar docente');
+        if (!ok) return;
+        await fetch(`${API_URL}/admin/docentes/${row.id}?usuario_id=${state.user.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: state.user.id }),
+        });
+        loadTeachers();
+    });
+    on('admin-address-delete-btn', 'click', async () => {
+        const row = grids.addresses?.getSelected();
+        if (!row) return;
+        const ok = await showConfirm('¿Eliminar esta dirección?', 'Borrar dirección');
+        if (!ok) return;
+        await fetch(`${API_URL}/direcciones/${row.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_user: state.user.id }),
+        });
+        loadAddresses();
+    });
+    on('cupo-edit-btn', 'click', async () => {
+        const row = grids.cupos?.getSelected();
+        if (!row) return;
+        const typed = await showPrompt(
+            `${row.grado_nombre} ${row.nombre} tiene ${row.ocupados} alumnos. Nuevo cupo:`,
+            'Editar cupo',
+            String(row.cupo)
+        );
+        if (typed === null || !String(typed).trim()) return;
+        const cupo = Number(typed);
+        if (!Number.isInteger(cupo) || cupo < 0) {
+            showToast('El cupo debe ser un número entero', 'error');
+            return;
+        }
+        const res = await fetch(`${API_URL}/admin/secciones/${row.id}/cupo`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: state.user.id, cupo }),
+        });
+        if (!res.ok) {
+            const msg = await parseResponseError(res, 'No se pudo guardar el cupo');
+            showToast(msg, 'error');
+            return;
+        }
+        showToast('Cupo actualizado', 'success');
+        await loadCatalogs();
+        refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección', true);
+        refreshNamedSectionSelect('teacher-grade-select', 'teacher-section-select', 'Sin asignar');
+    });
+    on('user-password-btn', 'click', async () => {
+        const row = grids.users?.getSelected();
+        if (!row) return;
+        const newPassword = await showPrompt(`Nueva contraseña para ${row.nombre}:`, 'Cambiar clave');
+        if (!newPassword) return;
+        const update = await fetch(`${API_URL}/admin/usuarios/${row.id}/password`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: state.user.id, nueva_contraseña: newPassword }),
+        });
+        if (update.ok) showToast('Contraseña actualizada', 'success');
+        else showToast('No se pudo actualizar la contraseña', 'error');
+    });
+
     bindEvents();
     try {
         await loadCatalogs();
         refreshSectionOptions();
-        refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección');
+        refreshNamedSectionSelect('operator-grade-select', 'operator-section-select', 'Selecciona sección', true);
         refreshNamedSectionSelect('teacher-grade-select', 'teacher-section-select', 'Sin asignar');
         await Promise.all([
             loadEnrollmentGrid(),
             loadAddresses(),
             loadContacts(),
+            loadAvisos(),
             loadUsers(),
             loadInstitutionConfig(),
             loadTeachers(),

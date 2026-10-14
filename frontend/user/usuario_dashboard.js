@@ -1,12 +1,11 @@
 const API_URL = window.API_URL || 'http://localhost:3000';
-const dashboardState = { grades: [], sections: [], documentTypes: [], students: [], addresses: [] };
+const dashboardState = { grades: [], sections: [], documentTypes: [], students: [], addresses: [], enrollments: [] };
+const byId = (id) => document.getElementById(id);
 
 const renderStatusBadge = (status) => {
     const label = (status || 'pendiente').replace('_', ' ');
     return `<span class="badge badge-${status || 'pendiente'}">${label}</span>`;
 };
-
-const byId = (id) => document.getElementById(id);
 
 document.addEventListener('DOMContentLoaded', () => {
     const user = JSON.parse(localStorage.getItem('usuario') || 'null');
@@ -17,11 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const greeting = byId('user-greeting');
     if (greeting) greeting.textContent = user.nombre;
-    const nameEl = byId('user-name');
-    if (nameEl) nameEl.textContent = user.nombre;
 
     const showUserPanel = (panelId) => {
-        const valid = ['estudiantes', 'direcciones', 'inscripciones', 'configuracion'];
+        const valid = ['estudiantes', 'inscripciones', 'avisos', 'configuracion'];
         const id = valid.includes(panelId) ? panelId : 'estudiantes';
         document.querySelectorAll('.user-panel').forEach((panel) => {
             panel.classList.toggle('is-active', panel.id === `panel-${id}`);
@@ -40,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileNav && !mobileNav.innerHTML.trim()) {
         mobileNav.innerHTML = `<ul>
             <li><button type="button" data-panel="estudiantes">Estudiantes</button></li>
-            <li><button type="button" data-panel="direcciones">Direcciones</button></li>
             <li><button type="button" data-panel="inscripciones">Inscripciones</button></li>
+            <li><button type="button" data-panel="avisos">Avisos</button></li>
         </ul>`;
     }
 
@@ -50,8 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             showUserPanel(link.dataset.panel);
+            const menu = byId('user-config-menu');
+            if (menu) menu.hidden = true;
         });
     });
+    bindConfigMenu(byId('user-config-toggle'), byId('user-config-menu'));
+
+    document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
+    });
+
     const logoutBtn = byId('logout-btn');
     if (logoutBtn) {
         logoutBtn.onclick = () => {
@@ -59,8 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '../login/login.html';
         };
     }
-    const hashPanel = (location.hash || '#estudiantes').replace('#', '');
-    if (document.querySelector('.user-panel')) showUserPanel(hashPanel);
+    showUserPanel((location.hash || '#estudiantes').replace('#', ''));
     window.addEventListener('popstate', () => {
         showUserPanel((location.hash || '#estudiantes').replace('#', ''));
     });
@@ -75,13 +79,62 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
+    const setStudentActions = (row) => {
+        byId('student-edit-btn').disabled = !row;
+        byId('student-address-btn').disabled = !row;
+    };
+    const setEnrollmentActions = (row) => {
+        const canFix = row && row.estado !== 'aprobada';
+        byId('enrollment-docs-btn').disabled = !canFix;
+        byId('enrollment-resend-btn').disabled = !(row && row.estado === 'rechazada');
+        byId('enrollment-delete-btn').disabled = !canFix;
+    };
+
+    const studentsGrid = createDataGrid({
+        container: byId('students-list'),
+        footer: byId('students-grid-footer'),
+        searchInput: byId('students-search'),
+        pageSize: 10,
+        emptyText: 'Todavía no hay estudiantes registrados.',
+        columns: [
+            {
+                key: 'foto',
+                label: 'Foto',
+                render: (row) => row.foto_url
+                    ? `<img class="student-thumb" src="${window.resolveAssetUrl(row.foto_url)}" alt="">`
+                    : '—',
+            },
+            { key: 'nombre', label: 'Nombre' },
+            { key: 'cedula', label: 'Cédula', value: (row) => row.cedula || '—' },
+            { key: 'grado', label: 'Grado', value: (row) => row.grado_nombre || row.grado || '—' },
+            { key: 'seccion', label: 'Sección', value: (row) => row.seccion_nombre || '—' },
+        ],
+        onSelect: setStudentActions,
+    });
+
+    const enrollmentsGrid = createDataGrid({
+        container: byId('inscripciones-container'),
+        footer: byId('enrollments-grid-footer'),
+        searchInput: byId('enrollments-search'),
+        pageSize: 10,
+        emptyText: 'Sin inscripciones.',
+        columns: [
+            { key: 'estudiante_nombre', label: 'Estudiante' },
+            { key: 'grado', label: 'Grado' },
+            { key: 'estado', label: 'Estado', render: (row) => renderStatusBadge(row.estado) },
+            { key: 'fecha', label: 'Fecha', value: (row) => (row.fecha ? new Date(row.fecha).toLocaleDateString('es') : '—') },
+        ],
+        onSelect: setEnrollmentActions,
+    });
+
     const loadStudents = () => {
         const select = byId('estudiante-select');
-        const list = byId('students-list');
         fetch(`${API_URL}/estudiantes/usuario?usuario_id=${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 dashboardState.students = data || [];
+                const count = byId('students-count');
+                if (count) count.textContent = `Registrados: ${dashboardState.students.length}`;
                 if (select) {
                     select.innerHTML = '<option value="">Selecciona un estudiante</option>';
                     dashboardState.students.forEach((est) => {
@@ -93,44 +146,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         select.appendChild(opt);
                     });
                 }
-                if (!list) return;
-                if (!dashboardState.students.length) {
-                    list.innerHTML = '<p class="empty-state">Todavía no cargaste estudiantes.</p>';
-                    return;
-                }
-                let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Grado</th><th>Sección</th><th></th></tr></thead><tbody>';
-                dashboardState.students.forEach((est) => {
-                    html += `<tr>
-                        <td>${est.nombre}</td>
-                        <td>${est.cedula || '—'}</td>
-                        <td>${est.grado_nombre || est.grado || '—'}</td>
-                        <td>${est.seccion_nombre || '—'}</td>
-                        <td><button class="btn btn-outline btn-sm edit-student-btn" type="button" data-id="${est.id}">Corregir</button></td>
-                    </tr>`;
-                });
-                list.innerHTML = html + '</tbody></table></div>';
-                list.querySelectorAll('.edit-student-btn').forEach((btn) => {
-                    btn.addEventListener('click', () => fillStudentForm(Number(btn.dataset.id)));
-                });
+                studentsGrid.setRows(dashboardState.students);
             });
     };
 
-    const fillStudentForm = (studentId) => {
-        const student = dashboardState.students.find((item) => Number(item.id) === studentId);
-        if (!student) return;
+    const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
+
+    const setStudentPhotoPreview = (url) => {
+        const preview = byId('student-photo-preview');
+        if (!preview) return;
+        if (url) {
+            preview.src = url.startsWith('blob:') ? url : window.resolveAssetUrl(url);
+            preview.hidden = false;
+        } else {
+            preview.removeAttribute('src');
+            preview.hidden = true;
+        }
+    };
+
+    const fillStudentForm = (student) => {
         const form = byId('estudiante-form');
-        if (!form) return;
+        if (!form || !student) return;
         byId('student-edit-id').value = String(student.id);
         form.nombre.value = student.nombre || '';
         form.cedula.value = student.cedula || '';
         byId('student-grade-select').value = student.grado_id ? String(student.grado_id) : '';
         refreshSections();
         byId('student-section-select').value = student.seccion_id ? String(student.seccion_id) : '';
-        byId('student-form-title').textContent = 'Corregir estudiante';
-        byId('student-submit-btn').textContent = 'Guardar corrección';
-        const cancel = byId('student-cancel-edit');
-        if (cancel) cancel.hidden = false;
-        form.scrollIntoView({ behavior: 'smooth' });
+        byId('student-birthdate').value = toDateInput(student.fecha_nacimiento);
+        byId('student-sexo').value = student.sexo || '';
+        byId('student-alergias').value = student.alergias || '';
+        byId('student-observaciones').value = student.observaciones || '';
+        byId('student-photo-file').value = '';
+        setStudentPhotoPreview(student.foto_url);
+        byId('student-form-title').textContent = 'Modificar estudiante';
+        byId('student-submit-btn').textContent = 'Guardar';
+        openModal('student-modal');
     };
 
     const resetStudentForm = () => {
@@ -138,56 +189,60 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!form) return;
         form.reset();
         byId('student-edit-id').value = '';
+        byId('student-photo-file').value = '';
+        setStudentPhotoPreview('');
         byId('student-form-title').textContent = 'Nuevo estudiante';
-        byId('student-submit-btn').textContent = 'Crear estudiante';
-        const cancel = byId('student-cancel-edit');
-        if (cancel) cancel.hidden = true;
+        byId('student-submit-btn').textContent = 'Guardar';
         refreshSections();
     };
 
     const populateAcademicCatalog = () => {
-        if (!byId('student-grade-select') && !byId('period-select') && !byId('doc-code')) return;
-        Promise.all([
+        return Promise.all([
             fetch(`${API_URL}/catalogos/escolares`).then((res) => res.json()),
             fetch(`${API_URL}/catalogos/documentos`).then((res) => res.json()),
-        ])
-            .then(([catalog, documentTypes]) => {
-                dashboardState.grades = catalog.grados || [];
-                dashboardState.sections = catalog.secciones || [];
-                dashboardState.documentTypes = documentTypes || [];
-
-                const gradeSelect = byId('student-grade-select');
-                if (gradeSelect) {
-                    dashboardState.grades.forEach((grade) => {
-                        const opt = document.createElement('option');
-                        opt.value = String(grade.id);
-                        opt.textContent = grade.nombre;
-                        gradeSelect.appendChild(opt);
-                    });
-                }
-
-                const periodSelect = byId('period-select');
-                if (periodSelect) {
-                    (catalog.periodos || []).forEach((period) => {
-                        const opt = document.createElement('option');
-                        opt.value = String(period.id);
-                        opt.textContent = period.activo ? `${period.nombre} (activo)` : period.nombre;
-                        periodSelect.appendChild(opt);
-                    });
-                }
-
-                const docCodeSelect = byId('doc-code');
-                if (docCodeSelect) {
-                    dashboardState.documentTypes.forEach((docType) => {
-                        const opt = document.createElement('option');
-                        opt.value = docType.codigo;
-                        opt.textContent = docType.obligatorio ? `${docType.nombre} (obligatorio)` : docType.nombre;
-                        docCodeSelect.appendChild(opt);
-                    });
-                    const commitment = dashboardState.documentTypes.find((doc) => doc.codigo === 'carta_compromiso');
-                    if (commitment) docCodeSelect.value = commitment.codigo;
-                }
-            });
+        ]).then(([catalog, documentTypes]) => {
+            dashboardState.grades = catalog.grados || [];
+            dashboardState.sections = catalog.secciones || [];
+            dashboardState.documentTypes = documentTypes || [];
+            const gradeSelect = byId('student-grade-select');
+            if (gradeSelect) {
+                const current = gradeSelect.value;
+                gradeSelect.innerHTML = '<option value="">Selecciona grado</option>';
+                dashboardState.grades.forEach((grade) => {
+                    const opt = document.createElement('option');
+                    opt.value = String(grade.id);
+                    opt.textContent = grade.nombre;
+                    gradeSelect.appendChild(opt);
+                });
+                if (current) gradeSelect.value = current;
+            }
+            const periodSelect = byId('period-select');
+            if (periodSelect) {
+                const currentPeriod = periodSelect.value;
+                periodSelect.innerHTML = '<option value="">Período activo</option>';
+                (catalog.periodos || []).forEach((period) => {
+                    const opt = document.createElement('option');
+                    opt.value = String(period.id);
+                    opt.textContent = period.activo ? `${period.nombre} (activo)` : period.nombre;
+                    periodSelect.appendChild(opt);
+                });
+                if (currentPeriod) periodSelect.value = currentPeriod;
+            }
+            const docCodeSelect = byId('doc-code');
+            if (docCodeSelect) {
+                const currentDoc = docCodeSelect.value;
+                docCodeSelect.innerHTML = '<option value="">Selecciona tipo</option>';
+                dashboardState.documentTypes.forEach((docType) => {
+                    const opt = document.createElement('option');
+                    opt.value = docType.codigo;
+                    opt.textContent = docType.obligatorio ? `${docType.nombre} (obligatorio)` : docType.nombre;
+                    docCodeSelect.appendChild(opt);
+                });
+                const commitment = dashboardState.documentTypes.find((doc) => doc.codigo === 'carta_compromiso');
+                docCodeSelect.value = currentDoc || commitment?.codigo || '';
+            }
+            refreshSections();
+        });
     };
 
     const refreshSections = () => {
@@ -196,6 +251,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const gradeText = byId('student-grade-text');
         if (!gradeSelect || !sectionSelect) return;
         const selectedGradeId = gradeSelect.value;
+        const currentSectionId = sectionSelect.value;
+        const editingSectionId = byId('student-edit-id')?.value
+            ? dashboardState.students.find((row) => String(row.id) === byId('student-edit-id').value)?.seccion_id
+            : null;
         const grade = dashboardState.grades.find((item) => String(item.id) === selectedGradeId);
         if (gradeText) gradeText.value = grade ? grade.nombre : '';
         sectionSelect.innerHTML = '<option value="">Selecciona sección</option>';
@@ -206,64 +265,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opt = document.createElement('option');
                 opt.value = String(section.id);
                 opt.textContent = section.nombre;
+                const isCurrent = String(section.id) === String(editingSectionId || '');
+                opt.disabled = section.disponible === false && !isCurrent;
                 sectionSelect.appendChild(opt);
+            });
+        if (currentSectionId && Array.from(sectionSelect.options).some((opt) => opt.value === currentSectionId)) {
+            sectionSelect.value = currentSectionId;
+        } else {
+            const enabled = Array.from(sectionSelect.options).filter((opt) => opt.value && !opt.disabled);
+            if (enabled.length === 1) sectionSelect.value = enabled[0].value;
+        }
+    };
+
+    const loadAvisos = () => {
+        const box = byId('avisos-list');
+        if (!box) return;
+        fetch(`${API_URL}/avisos?usuario_id=${user.id}`)
+            .then((res) => res.json())
+            .then((rows) => {
+                if (!rows.length) {
+                    box.innerHTML = '<p class="empty-state">Todavía no hay avisos de la institución.</p>';
+                    return;
+                }
+                const esc = (value) => String(value || '').replace(/</g, '&lt;');
+                box.innerHTML = rows.map((row) => `
+                    <article class="aviso-card">
+                        <header>
+                            <h3>${esc(row.titulo)}</h3>
+                            <time>${row.creado_en ? new Date(row.creado_en).toLocaleString('es') : ''}</time>
+                        </header>
+                        <p>${esc(row.mensaje)}</p>
+                    </article>
+                `).join('');
             });
     };
 
+    const uploadStudentPhoto = async (studentId) => {
+        const input = byId('student-photo-file');
+        if (!input?.files?.[0] || !studentId) return true;
+        const form = new FormData();
+        form.append('usuario_id', String(user.id));
+        form.append('foto', input.files[0]);
+        const res = await fetch(`${API_URL}/estudiantes/${studentId}/foto`, { method: 'POST', body: form });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.error || 'El estudiante se guardó, pero la foto no', 'error');
+            return false;
+        }
+        return true;
+    };
+
     const loadEnrollments = () => {
-        const container = byId('inscripciones-container');
-        if (!container) return;
         fetch(`${API_URL}/inscripciones/usuario?usuario_id=${user.id}`)
             .then((res) => res.json())
             .then((data) => {
-                if (data.length === 0) {
-                    container.innerHTML = '<p class="empty-state">Sin inscripciones.</p>';
-                    return;
-                }
-                let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Estudiante</th><th>Grado</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>';
-                data.forEach((i) => {
-                    const fecha = i.fecha ? new Date(i.fecha).toLocaleDateString('es') : '-';
-                    const canFix = i.estado !== 'aprobada';
-                    html += `<tr><td>${i.estudiante_nombre}</td><td>${i.grado}</td>
-                    <td>${renderStatusBadge(i.estado)}</td><td>${fecha}</td>
-                    <td class="table-actions">
-                        ${canFix ? `<button class="btn btn-outline btn-sm fix-enrollment-btn" data-id="${i.id}">Corregir docs</button>` : ''}
-                        ${i.estado === 'rechazada' ? `<button class="btn btn-primary btn-sm resend-enrollment-btn" data-id="${i.id}">Reenviar</button>` : ''}
-                        ${canFix ? `<button class="btn btn-danger btn-sm delete-enrollment-btn" data-id="${i.id}">Borrar</button>` : ''}
-                    </td></tr>`;
-                });
-                container.innerHTML = html + '</tbody></table></div>';
-
-                container.querySelectorAll('.delete-enrollment-btn').forEach((btn) => {
-                    btn.addEventListener('click', async () => {
-                        if (!confirm('¿Eliminar esta inscripción?')) return;
-                        await fetch(`${API_URL}/inscripciones/${btn.dataset.id}`, {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ usuario_id: user.id }),
-                        });
-                        loadEnrollments();
-                    });
-                });
-                container.querySelectorAll('.resend-enrollment-btn').forEach((btn) => {
-                    btn.addEventListener('click', async () => {
-                        const res = await fetch(`${API_URL}/inscripciones/${btn.dataset.id}/reenviar`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ usuario_id: user.id }),
-                        });
-                        if (!res.ok) {
-                            const err = await res.json().catch(() => ({}));
-                            showToast(err.error || 'No se pudo reenviar', 'error');
-                            return;
-                        }
-                        showToast('Preinscripción reenviada a revisión', 'success');
-                        loadEnrollments();
-                    });
-                });
-                container.querySelectorAll('.fix-enrollment-btn').forEach((btn) => {
-                    btn.addEventListener('click', () => addDocumentsToEnrollment(btn.dataset.id));
-                });
+                dashboardState.enrollments = data || [];
+                enrollmentsGrid.setRows(dashboardState.enrollments);
+                setEnrollmentActions(null);
             });
     };
 
@@ -296,61 +354,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadAddresses = () => {
-        const container = byId('direcciones-container');
-        if (!container) return;
         fetch(`${API_URL}/direcciones/usuario?usuario_id=${user.id}`)
             .then((res) => res.json())
             .then((data) => {
                 dashboardState.addresses = data || [];
-                if (data.length === 0) {
-                    container.innerHTML = '<p class="empty-state">Sin direcciones.</p>';
-                    return;
-                }
-                let html = '<div class="table-wrapper"><table class="data-table"><thead><tr><th>Barrio</th><th>Parroquia</th><th>Municipio</th><th>Estado</th><th></th></tr></thead><tbody>';
-                data.forEach((d) => {
-                    html += `<tr>
-                        <td>${d.barrio || d.sector || '—'}</td>
-                        <td>${d.parroquia || '—'}</td>
-                        <td>${d.municipio || '—'}</td>
-                        <td>${d.estado || d.state || '—'}</td>
-                        <td><button class="btn btn-outline btn-sm edit-address-btn" type="button" data-id="${d.id}">Corregir</button></td>
-                    </tr>`;
-                });
-                container.innerHTML = html + '</tbody></table></div>';
-                container.querySelectorAll('.edit-address-btn').forEach((btn) => {
-                    btn.addEventListener('click', () => fillAddressForm(Number(btn.dataset.id)));
-                });
             });
     };
 
-    const fillAddressForm = (addressId) => {
-        const address = dashboardState.addresses.find((item) => Number(item.id) === addressId);
-        const form = byId('direccion-form');
-        if (!address || !form) return;
-        byId('address-edit-id').value = String(address.id);
-        form.calle.value = address.calle || '';
-        form.av.value = address.av || '';
-        form.barrio.value = address.barrio || address.sector || '';
-        form.n_casa.value = address.n_casa || '';
-        form.parroquia.value = address.parroquia || '';
-        form.municipio.value = address.municipio || '';
-        form.estado.value = address.estado || address.state || '';
-        byId('address-form-title').textContent = 'Corregir dirección';
-        byId('address-submit-btn').textContent = 'Guardar corrección';
-        const cancel = byId('address-cancel-edit');
-        if (cancel) cancel.hidden = false;
-        form.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const resetAddressForm = () => {
+    const fillAddressForm = (address) => {
         const form = byId('direccion-form');
         if (!form) return;
-        form.reset();
-        byId('address-edit-id').value = '';
-        byId('address-form-title').textContent = 'Registrar dirección';
-        byId('address-submit-btn').textContent = 'Guardar dirección';
-        const cancel = byId('address-cancel-edit');
-        if (cancel) cancel.hidden = true;
+        byId('address-edit-id').value = address ? String(address.id) : '';
+        form.calle.value = address?.calle || '';
+        form.av.value = address?.av || '';
+        form.barrio.value = address?.barrio || address?.sector || '';
+        form.n_casa.value = address?.n_casa || '';
+        form.parroquia.value = address?.parroquia || '';
+        form.municipio.value = address?.municipio || '';
+        form.estado.value = address?.estado || address?.state || '';
+        byId('address-form-title').textContent = address ? 'Modificar dirección' : 'Registrar dirección';
+        openModal('address-modal');
     };
 
     const fillProfileForm = () => {
@@ -361,135 +384,169 @@ document.addEventListener('DOMContentLoaded', () => {
         byId('profile-email').value = user.email || '';
     };
 
-    if (byId('student-grade-select')) {
-        byId('student-grade-select').addEventListener('change', refreshSections);
-    }
-    if (byId('student-cancel-edit')) {
-        byId('student-cancel-edit').addEventListener('click', resetStudentForm);
-    }
-    if (byId('address-cancel-edit')) {
-        byId('address-cancel-edit').addEventListener('click', resetAddressForm);
-    }
-
-    if (byId('estudiante-form')) {
-        byId('estudiante-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const data = Object.fromEntries(new FormData(e.target));
-            data.usuario_id = user.id;
-            if (!data.cedula) delete data.cedula;
-            const editId = byId('student-edit-id').value;
-            const res = await fetch(editId ? `${API_URL}/estudiantes/${editId}` : `${API_URL}/estudiantes`, {
-                method: editId ? 'PATCH' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            if (res.ok) {
-                showToast(editId ? 'Estudiante corregido' : 'Estudiante creado', 'success');
-                resetStudentForm();
-                loadStudents();
-                return;
-            }
+    byId('student-grade-select')?.addEventListener('change', refreshSections);
+    byId('student-photo-file')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) setStudentPhotoPreview(URL.createObjectURL(file));
+    });
+    byId('student-new-btn')?.addEventListener('click', () => {
+        resetStudentForm();
+        openModal('student-modal');
+    });
+    byId('student-edit-btn')?.addEventListener('click', async () => {
+        const row = studentsGrid.getSelected();
+        if (!row) return;
+        const ok = await showConfirm(`¿Modificar el estudiante ${row.nombre}?`, 'Modificar registro');
+        if (!ok) return;
+        fillStudentForm(row);
+    });
+    byId('student-address-btn')?.addEventListener('click', () => {
+        const row = studentsGrid.getSelected();
+        if (!row) return;
+        fillAddressForm(dashboardState.addresses[0] || null);
+    });
+    byId('enrollment-new-btn')?.addEventListener('click', () => openModal('enrollment-form-modal'));
+    byId('enrollment-docs-btn')?.addEventListener('click', () => {
+        const row = enrollmentsGrid.getSelected();
+        if (row) addDocumentsToEnrollment(row.id);
+    });
+    byId('enrollment-resend-btn')?.addEventListener('click', async () => {
+        const row = enrollmentsGrid.getSelected();
+        if (!row) return;
+        const ok = await showConfirm('¿Reenviar esta preinscripción a revisión?', 'Reenviar');
+        if (!ok) return;
+        const res = await fetch(`${API_URL}/inscripciones/${row.id}/reenviar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: user.id }),
+        });
+        if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            showToast(err.error || 'No se pudo guardar el estudiante', 'error');
+            showToast(err.error || 'No se pudo reenviar', 'error');
+            return;
+        }
+        showToast('Preinscripción reenviada a revisión', 'success');
+        loadEnrollments();
+    });
+    byId('enrollment-delete-btn')?.addEventListener('click', async () => {
+        const row = enrollmentsGrid.getSelected();
+        if (!row) return;
+        const ok = await showConfirm('¿Borrar esta inscripción? Esta acción no se deshace.', 'Borrar registro');
+        if (!ok) return;
+        await fetch(`${API_URL}/inscripciones/${row.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: user.id }),
+        });
+        loadEnrollments();
+    });
+
+    byId('estudiante-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        data.usuario_id = user.id;
+        if (!data.cedula) delete data.cedula;
+        const editId = byId('student-edit-id').value;
+        const res = await fetch(editId ? `${API_URL}/estudiantes/${editId}` : `${API_URL}/estudiantes`, {
+            method: editId ? 'PATCH' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (res.ok) {
+            const saved = await res.json();
+            await uploadStudentPhoto(saved.id || editId);
+            showToast(editId ? 'Estudiante modificado' : 'Estudiante registrado', 'success');
+            closeModal('student-modal');
+            resetStudentForm();
+            await populateAcademicCatalog();
+            loadStudents();
+            return;
+        }
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || 'No se pudo guardar el estudiante', 'error');
+    };
+
+    byId('direccion-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target));
+        data.id_user = user.id;
+        const editId = byId('address-edit-id').value;
+        const res = await fetch(editId ? `${API_URL}/direcciones/${editId}` : `${API_URL}/direcciones`, {
+            method: editId ? 'PATCH' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (res.ok) {
+            showToast(editId ? 'Dirección modificada' : 'Dirección guardada', 'success');
+            closeModal('address-modal');
+            loadAddresses();
+            return;
+        }
+        showToast('No se pudo guardar la dirección', 'error');
+    };
+
+    byId('inscripcion-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const estudiante_id = byId('estudiante-select').value;
+        const periodo_id = byId('period-select').value || null;
+        const selectedDocCode = byId('doc-code').value || null;
+        const selectedDoc = dashboardState.documentTypes.find((doc) => doc.codigo === selectedDocCode);
+        const files = byId('doc-files').files;
+        const res = await fetch(`${API_URL}/inscripciones`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estudiante_id, usuario_id: user.id, periodo_id }),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            showToast(err.error || 'No se pudo crear la preinscripción', 'error');
+            return;
+        }
+        const created = await res.json();
+        if (files.length) {
+            const docsForm = new FormData();
+            docsForm.append('usuario_id', String(user.id));
+            docsForm.append('tipo_documento', selectedDoc?.nombre || 'Documento PDF');
+            if (selectedDocCode) docsForm.append('codigo_documento', selectedDocCode);
+            Array.from(files).forEach((file) => docsForm.append('documentos', file));
+            await fetch(`${API_URL}/inscripciones/${created.id}/documentos`, { method: 'POST', body: docsForm });
+        }
+        showToast('Preinscripción enviada', 'success');
+        e.target.reset();
+        closeModal('enrollment-form-modal');
+        loadEnrollments();
+    };
+
+    fillProfileForm();
+    byId('profile-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const payload = {
+            usuario_id: user.id,
+            nombre: byId('profile-nombre').value.trim(),
+            apellido: byId('profile-apellido').value.trim(),
+            email: byId('profile-email').value.trim(),
         };
-    }
-
-    if (byId('direccion-form')) {
-        byId('direccion-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const data = Object.fromEntries(new FormData(e.target));
-            data.id_user = user.id;
-            const editId = byId('address-edit-id').value;
-            const res = await fetch(editId ? `${API_URL}/direcciones/${editId}` : `${API_URL}/direcciones`, {
-                method: editId ? 'PATCH' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            if (res.ok) {
-                showToast(editId ? 'Dirección corregida' : 'Dirección guardada', 'success');
-                resetAddressForm();
-                loadAddresses();
-                return;
-            }
-            showToast('No se pudo guardar la dirección', 'error');
-        };
-    }
-
-    if (byId('inscripcion-form')) {
-        byId('inscripcion-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const estudiante_id = byId('estudiante-select').value;
-            const periodo_id = byId('period-select').value || null;
-            const selectedDocCode = byId('doc-code').value || null;
-            const selectedDoc = dashboardState.documentTypes.find((doc) => doc.codigo === selectedDocCode);
-            const docTypeLabel = selectedDoc?.nombre || 'Documento PDF';
-            const files = byId('doc-files').files;
-
-            const res = await fetch(`${API_URL}/inscripciones`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estudiante_id, usuario_id: user.id, periodo_id }),
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                showToast(err.error || 'No se pudo crear la preinscripción', 'error');
-                return;
-            }
-
-            const created = await res.json();
-            if (files.length) {
-                const docsForm = new FormData();
-                docsForm.append('usuario_id', String(user.id));
-                docsForm.append('tipo_documento', docTypeLabel);
-                if (selectedDocCode) docsForm.append('codigo_documento', selectedDocCode);
-                Array.from(files).forEach((file) => docsForm.append('documentos', file));
-                const docsRes = await fetch(`${API_URL}/inscripciones/${created.id}/documentos`, {
-                    method: 'POST',
-                    body: docsForm,
-                });
-                if (!docsRes.ok) {
-                    showToast('Preinscripción creada, pero falló la carga de PDFs', 'error');
-                    return;
-                }
-            }
-            showToast('Preinscripción enviada', 'success');
-            e.target.reset();
-            loadEnrollments();
-        };
-    }
-
-    if (byId('profile-form')) {
-        fillProfileForm();
-        byId('profile-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const payload = {
-                usuario_id: user.id,
-                nombre: byId('profile-nombre').value.trim(),
-                apellido: byId('profile-apellido').value.trim(),
-                email: byId('profile-email').value.trim(),
-            };
-            const password = byId('profile-password').value;
-            if (password) payload.contraseña = password;
-            const res = await fetch(`${API_URL}/usuarios/${user.id}/perfil`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                showToast(data.error || 'No se pudo guardar la cuenta', 'error');
-                return;
-            }
-            localStorage.setItem('usuario', JSON.stringify({ ...user, ...data }));
-            showToast('Datos de representante actualizados', 'success');
-            byId('profile-password').value = '';
-            const greet = byId('user-greeting');
-            if (greet) greet.textContent = data.nombre;
-        };
-    }
+        const password = byId('profile-password').value;
+        if (password) payload.contraseña = password;
+        const res = await fetch(`${API_URL}/usuarios/${user.id}/perfil`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.error || 'No se pudo guardar la cuenta', 'error');
+            return;
+        }
+        localStorage.setItem('usuario', JSON.stringify({ ...user, ...data }));
+        showToast('Datos de representante actualizados', 'success');
+        byId('profile-password').value = '';
+        if (greeting) greeting.textContent = data.nombre;
+    };
 
     loadStudents();
     loadEnrollments();
     loadAddresses();
+    loadAvisos();
     populateAcademicCatalog();
 });

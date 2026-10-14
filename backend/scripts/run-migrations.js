@@ -12,6 +12,9 @@ const MIGRATIONS = [
     '007_documentos_requeridos_y_seguridad.sql',
     '008_preescolar_logo_docentes.sql',
     '009_email_usuario.sql',
+    '010_cupos_avisos_personalizacion.sql',
+    '011_grados_secciones_reales.sql',
+    '012_nombre_institucion.sql',
 ];
 
 const run = async () => {

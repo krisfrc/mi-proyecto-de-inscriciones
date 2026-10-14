@@ -3,6 +3,7 @@
 -- (como usuario postgres o inscripciones con permisos)
 
 TRUNCATE TABLE
+    avisos_colectivos,
     inscripcion_historial,
     inscripciones,
     estudiantes,

@@ -1,6 +1,5 @@
 const USER_LINKS = [
     { id: 'estudiantes', href: 'usuario_dashboard.html#estudiantes', label: '👤 Estudiantes' },
-    { id: 'direcciones', href: 'usuario_dashboard.html#direcciones', label: '📍 Direcciones' },
     { id: 'inscripciones', href: 'usuario_dashboard.html#inscripciones', label: '📝 Inscripciones' },
 ];
 
@@ -24,7 +23,7 @@ const mountUserChrome = () => {
         header.innerHTML = `
             <a href="usuario_dashboard.html#estudiantes" class="brand">
                 <span class="brand-icon">🎓</span>
-                <span class="brand-name">Escuela básica nacional la cuadra de Bolivar</span>
+                <span class="brand-name">Escuela Básica Nacional La Cuadra de Bolívar</span>
             </a>
             <nav>
                 <span id="user-greeting" class="user-chip">${user.nombre}</span>
@@ -37,7 +36,7 @@ const mountUserChrome = () => {
     const sidebar = document.querySelector('[data-user-sidebar]');
     if (sidebar) {
         sidebar.innerHTML = `
-            <div class="sidebar-brand" data-institution-name>Escuela básica nacional la cuadra de Bolivar</div>
+            <div class="sidebar-brand" data-institution-name>Escuela Básica Nacional La Cuadra de Bolívar</div>
             <ul class="sidebar-nav">${renderUserNavLinks(activeId)}</ul>
         `;
     }

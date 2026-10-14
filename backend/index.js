@@ -20,8 +20,10 @@ const PORT = process.env.PORT || 3000;
 const VALID_STATUSES = ['pendiente', 'en_revision', 'aprobada', 'rechazada'];
 const uploadDir = path.join(__dirname, 'uploads', 'preinscripciones');
 const logoDir = path.join(__dirname, 'uploads', 'institucion');
+const photoDir = path.join(__dirname, 'uploads', 'estudiantes');
 fs.mkdirSync(uploadDir, { recursive: true });
 fs.mkdirSync(logoDir, { recursive: true });
+fs.mkdirSync(photoDir, { recursive: true });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const storage = multer.diskStorage({
@@ -46,6 +48,23 @@ const upload = multer({
 });
 
 const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif']);
+const photoUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, photoDir),
+        filename: (_req, file, cb) => {
+            const ext = (path.extname(file.originalname || '.jpg') || '.jpg').toLowerCase();
+            cb(null, `alumno-${Date.now()}${ext}`);
+        },
+    }),
+    limits: { fileSize: 4 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (!IMAGE_MIME_TYPES.has(file.mimetype)) {
+            cb(new Error('Solo se permiten imágenes (PNG, JPG, WEBP o SVG)'));
+            return;
+        }
+        cb(null, true);
+    },
+});
 const logoUpload = multer({
     storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, logoDir),
@@ -77,6 +96,23 @@ const recordEnrollmentHistory = async (client, enrollmentId, previousStatus, new
 const checkAdminRead = checkPermission('Administración', 'read');
 const checkAdminUpdate = checkPermission('Administración', 'update');
 const PRE_ENROLLMENT_STATES = ['pendiente', 'en_revision', 'rechazada'];
+const SECTIONS_WITH_QUOTA_SQL = `
+    SELECT s.id, s.nombre, s.grado_id, s.cupo,
+           g.nombre AS grado_nombre, g.orden,
+           COUNT(e.id)::int AS ocupados,
+           GREATEST(s.cupo - COUNT(e.id)::int, 0) AS disponibles
+    FROM secciones s
+    JOIN grados g ON g.id = s.grado_id
+    LEFT JOIN estudiantes e ON e.seccion_id = s.id
+    GROUP BY s.id, s.nombre, s.grado_id, s.cupo, g.nombre, g.orden
+    ORDER BY g.orden ASC, s.nombre ASC
+`;
+
+const emptyToNull = (value) => {
+    if (value === undefined || value === null) return null;
+    const text = String(value).trim();
+    return text ? text : null;
+};
 
 const parsePageValue = (value, fallback) => {
     const parsed = Number.parseInt(value, 10);
@@ -208,7 +244,42 @@ const resolveGradeAndSection = async (client, { grado, grado_id, seccion_id }) =
     return { gradeText, resolvedGradeId, resolvedSectionId };
 };
 
-const insertStudent = async (client, { nombre, usuarioId, grado, grado_id, seccion_id, cedula }) => {
+const assertSectionHasCapacity = async (client, seccionId, excludeStudentId = null) => {
+    if (!seccionId) return;
+    const result = await client.query(
+        `SELECT s.cupo,
+                (
+                    SELECT COUNT(*)::int
+                    FROM estudiantes e
+                    WHERE e.seccion_id = s.id
+                      AND ($2::int IS NULL OR e.id <> $2)
+                ) AS ocupados
+         FROM secciones s
+         WHERE s.id = $1`,
+        [seccionId, excludeStudentId]
+    );
+    if (!result.rows.length) {
+        throw httpError(400, 'Sección no válida');
+    }
+    const cupo = Number(result.rows[0].cupo) || 0;
+    const ocupados = Number(result.rows[0].ocupados) || 0;
+    if (ocupados >= cupo) {
+        throw httpError(409, 'Esa aula no está disponible. Elegí otra sección.');
+    }
+};
+
+const insertStudent = async (client, {
+    nombre,
+    usuarioId,
+    grado,
+    grado_id,
+    seccion_id,
+    cedula,
+    fecha_nacimiento,
+    sexo,
+    observaciones,
+    alergias,
+}) => {
     if (!nombre || !String(nombre).trim()) {
         throw httpError(400, 'El nombre del estudiante es obligatorio');
     }
@@ -217,11 +288,26 @@ const insertStudent = async (client, { nombre, usuarioId, grado, grado_id, secci
         grado_id,
         seccion_id,
     });
+    await assertSectionHasCapacity(client, resolvedSectionId);
     const resolvedCedula = await resolveStudentCedula(client, usuarioId, cedula);
     const result = await client.query(
-        `INSERT INTO estudiantes (nombre, grado, usuario_id, grado_id, seccion_id, cedula)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [String(nombre).trim(), gradeText, usuarioId, resolvedGradeId, resolvedSectionId, resolvedCedula]
+        `INSERT INTO estudiantes (
+            nombre, grado, usuario_id, grado_id, seccion_id, cedula,
+            fecha_nacimiento, sexo, observaciones, alergias
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [
+            String(nombre).trim(),
+            gradeText,
+            usuarioId,
+            resolvedGradeId,
+            resolvedSectionId,
+            resolvedCedula,
+            emptyToNull(fecha_nacimiento),
+            emptyToNull(sexo),
+            emptyToNull(observaciones),
+            emptyToNull(alergias),
+        ]
     );
     return result.rows[0];
 };
@@ -355,12 +441,7 @@ app.get('/admin/inscripciones/catalogos', checkAdminRead, async (req, res) => {
     try {
         const [grades, sections, periods] = await Promise.all([
             pool.query('SELECT id, nombre, orden FROM grados ORDER BY orden ASC'),
-            pool.query(
-                `SELECT s.id, s.nombre, s.grado_id, g.nombre AS grado_nombre, g.orden
-                 FROM secciones s
-                 JOIN grados g ON g.id = s.grado_id
-                 ORDER BY g.orden ASC, s.nombre ASC`
-            ),
+            pool.query(SECTIONS_WITH_QUOTA_SQL),
             pool.query('SELECT id, nombre, activo FROM periodos_escolares ORDER BY id DESC'),
         ]);
         res.json({
@@ -377,17 +458,19 @@ app.get('/catalogos/escolares', async (_req, res) => {
     try {
         const [grades, sections, periods] = await Promise.all([
             pool.query('SELECT id, nombre, orden FROM grados ORDER BY orden ASC'),
-            pool.query(
-                `SELECT s.id, s.nombre, s.grado_id, g.nombre AS grado_nombre, g.orden
-                 FROM secciones s
-                 JOIN grados g ON g.id = s.grado_id
-                 ORDER BY g.orden ASC, s.nombre ASC`
-            ),
+            pool.query(SECTIONS_WITH_QUOTA_SQL),
             pool.query('SELECT id, nombre, activo FROM periodos_escolares ORDER BY id DESC'),
         ]);
         res.json({
             grados: grades.rows,
-            secciones: sections.rows,
+            secciones: sections.rows.map((row) => ({
+                id: row.id,
+                nombre: row.nombre,
+                grado_id: row.grado_id,
+                grado_nombre: row.grado_nombre,
+                orden: row.orden,
+                disponible: Number(row.ocupados) < Number(row.cupo),
+            })),
             periodos: periods.rows,
         });
     } catch (err) {
@@ -809,7 +892,19 @@ app.get('/estudiantes/usuario', async (req, res) => {
 });
 
 app.post('/estudiantes', async (req, res) => {
-    const { nombre, grado, grado_id, seccion_id, usuario_id, representante_id, cedula } = req.body;
+    const {
+        nombre,
+        grado,
+        grado_id,
+        seccion_id,
+        usuario_id,
+        representante_id,
+        cedula,
+        fecha_nacimiento,
+        sexo,
+        observaciones,
+        alergias,
+    } = req.body;
     let client;
     try {
         client = await pool.connect();
@@ -829,6 +924,10 @@ app.post('/estudiantes', async (req, res) => {
             grado_id,
             seccion_id,
             cedula,
+            fecha_nacimiento,
+            sexo,
+            observaciones,
+            alergias,
         });
         res.status(201).json(student);
     } catch (err) {
@@ -846,7 +945,18 @@ app.post('/estudiantes', async (req, res) => {
 
 app.patch('/estudiantes/:id', async (req, res) => {
     const { id } = req.params;
-    const { usuario_id, nombre, grado, grado_id, seccion_id, cedula } = req.body;
+    const {
+        usuario_id,
+        nombre,
+        grado,
+        grado_id,
+        seccion_id,
+        cedula,
+        fecha_nacimiento,
+        sexo,
+        observaciones,
+        alergias,
+    } = req.body;
     if (!usuario_id) {
         return res.status(403).json({ error: 'Se requiere identificación del usuario' });
     }
@@ -877,6 +987,7 @@ app.patch('/estudiantes/:id', async (req, res) => {
             grado_id,
             seccion_id,
         });
+        await assertSectionHasCapacity(client, resolvedSectionId, Number(id));
         const nextCedula = cedula && String(cedula).trim()
             ? String(cedula).trim()
             : student.rows[0].cedula;
@@ -886,8 +997,12 @@ app.patch('/estudiantes/:id', async (req, res) => {
                  grado = COALESCE($2, grado),
                  grado_id = COALESCE($3, grado_id),
                  seccion_id = COALESCE($4, seccion_id),
-                 cedula = $5
-             WHERE id = $6
+                 cedula = $5,
+                 fecha_nacimiento = $6,
+                 sexo = $7,
+                 observaciones = $8,
+                 alergias = $9
+             WHERE id = $10
              RETURNING *`,
             [
                 nombre ? String(nombre).trim() : null,
@@ -895,6 +1010,18 @@ app.patch('/estudiantes/:id', async (req, res) => {
                 resolvedGradeId,
                 resolvedSectionId,
                 nextCedula,
+                Object.prototype.hasOwnProperty.call(req.body, 'fecha_nacimiento')
+                    ? emptyToNull(fecha_nacimiento)
+                    : student.rows[0].fecha_nacimiento,
+                Object.prototype.hasOwnProperty.call(req.body, 'sexo')
+                    ? emptyToNull(sexo)
+                    : student.rows[0].sexo,
+                Object.prototype.hasOwnProperty.call(req.body, 'observaciones')
+                    ? emptyToNull(observaciones)
+                    : student.rows[0].observaciones,
+                Object.prototype.hasOwnProperty.call(req.body, 'alergias')
+                    ? emptyToNull(alergias)
+                    : student.rows[0].alergias,
                 id,
             ]
         );
@@ -909,6 +1036,39 @@ app.patch('/estudiantes/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     } finally {
         if (client) client.release();
+    }
+});
+
+app.post('/estudiantes/:id/foto', photoUpload.single('foto'), async (req, res) => {
+    const { id } = req.params;
+    const usuarioId = req.body.usuario_id || req.query.usuario_id;
+    if (!usuarioId) {
+        return res.status(403).json({ error: 'Se requiere identificación del usuario' });
+    }
+    if (!req.file) {
+        return res.status(400).json({ error: 'Debes adjuntar una foto del estudiante' });
+    }
+    try {
+        const actor = await pool.query('SELECT id, rol_id FROM usuarios WHERE id = $1', [usuarioId]);
+        if (!actor.rows.length) {
+            return res.status(403).json({ error: 'Usuario no válido' });
+        }
+        const isAdmin = Number(actor.rows[0].rol_id) === 1;
+        const student = await pool.query('SELECT * FROM estudiantes WHERE id = $1', [id]);
+        if (!student.rows.length) {
+            return res.status(404).json({ error: 'Estudiante no encontrado' });
+        }
+        if (!isAdmin && Number(student.rows[0].usuario_id) !== Number(usuarioId)) {
+            return res.status(403).json({ error: 'No puedes cambiar la foto de otro representante' });
+        }
+        const fotoUrl = `/uploads/estudiantes/${req.file.filename}`;
+        const result = await pool.query(
+            `UPDATE estudiantes SET foto_url = $1 WHERE id = $2 RETURNING *`,
+            [fotoUrl, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -1294,6 +1454,100 @@ app.get('/admin/contactos', checkAdminRead, async (req, res) => {
     }
 });
 
+app.get('/admin/cupos', checkAdminRead, async (_req, res) => {
+    try {
+        const result = await pool.query(SECTIONS_WITH_QUOTA_SQL);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.patch('/admin/secciones/:id/cupo', checkAdminUpdate, async (req, res) => {
+    const cupo = Number(req.body.cupo);
+    if (!Number.isInteger(cupo) || cupo < 0 || cupo > 200) {
+        return res.status(400).json({ error: 'El cupo debe ser un número entero entre 0 y 200' });
+    }
+    try {
+        const occupied = await pool.query(
+            'SELECT COUNT(*)::int AS n FROM estudiantes WHERE seccion_id = $1',
+            [req.params.id]
+        );
+        if (cupo < occupied.rows[0].n) {
+            return res.status(400).json({
+                error: `Hay ${occupied.rows[0].n} alumnos en el aula. El cupo no puede ser menor.`,
+            });
+        }
+        const result = await pool.query(
+            'UPDATE secciones SET cupo = $1 WHERE id = $2 RETURNING *',
+            [cupo, req.params.id]
+        );
+        if (!result.rows.length) {
+            return res.status(404).json({ error: 'Sección no encontrada' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/avisos', async (req, res) => {
+    const usuarioId = req.query.usuario_id;
+    if (!usuarioId) {
+        return res.status(403).json({ error: 'Se requiere identificación del usuario' });
+    }
+    try {
+        const actor = await pool.query('SELECT id FROM usuarios WHERE id = $1', [usuarioId]);
+        if (!actor.rows.length) {
+            return res.status(403).json({ error: 'Usuario no válido' });
+        }
+        const result = await pool.query(
+            `SELECT a.id, a.titulo, a.mensaje, a.creado_en,
+                    u.nombre AS autor_nombre, u.apellido AS autor_apellido
+             FROM avisos_colectivos a
+             JOIN usuarios u ON u.id = a.usuario_id
+             ORDER BY a.creado_en DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/admin/avisos', checkAdminRead, async (_req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT a.id, a.titulo, a.mensaje, a.creado_en,
+                    u.nombre AS autor_nombre, u.apellido AS autor_apellido
+             FROM avisos_colectivos a
+             JOIN usuarios u ON u.id = a.usuario_id
+             ORDER BY a.creado_en DESC`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/admin/avisos', checkAdminUpdate, async (req, res) => {
+    const titulo = emptyToNull(req.body.titulo);
+    const mensaje = emptyToNull(req.body.mensaje);
+    if (!titulo || !mensaje) {
+        return res.status(400).json({ error: 'El título y el mensaje son obligatorios' });
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO avisos_colectivos (titulo, mensaje, usuario_id)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [titulo, mensaje, req.authUser.id]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/admin/usuarios', checkAdminRead, async (req, res) => {
     try {
         const result = await pool.query(
@@ -1395,7 +1649,7 @@ app.post('/admin/configuracion/institucion/logo', logoUpload.single('logo'), che
             const created = await pool.query(
                 `INSERT INTO institucion_config (nombre, logo_url)
                  VALUES ($1, $2) RETURNING *`,
-                ['Escuela básica nacional la cuadra de Bolivar', logoUrl]
+                ['Escuela Básica Nacional La Cuadra de Bolívar', logoUrl]
             );
             return res.json(created.rows[0]);
         }

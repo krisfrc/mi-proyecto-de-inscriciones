@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escuela básica nacional la cuadra de Bolivar — Inscripciones</title>
+    <title>Escuela Básica Nacional La Cuadra de Bolívar — Inscripciones</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,13 +12,14 @@
     <header class="app-header">
         <a href="index.html" class="brand">
             <span class="brand-icon" aria-hidden="true">🎓</span>
-            <span class="brand-name">Escuela básica nacional la cuadra de Bolivar</span>
+            <span class="brand-name">Escuela Básica Nacional La Cuadra de Bolívar</span>
         </a>
         <nav>
             <ul>
                 <li><a href="#inicio">Inicio</a></li>
-                <li><a href="#servicios">Servicios</a></li>
+                <li><a href="#servicios">La institución</a></li>
                 <li><a href="#proceso">Proceso</a></li>
+                <li><a href="#manual">Manual</a></li>
                 <li><a href="#contacto">Contacto</a></li>
             </ul>
             <div class="auth-buttons-main">
@@ -40,55 +42,30 @@
                     <a href="login/login.html?form=login" class="btn btn-outline btn-lg">Iniciar sesión</a>
                 </div>
             </div>
-            <div class="hero-visual">
-                <div class="hero-card-stack">
-                    <div class="hero-stat">
-                        <span class="hero-stat-icon">📱</span>
-                        <div>
-                            <strong>Desde el celular</strong>
-                            <span>Abre la web en tu teléfono</span>
-                        </div>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="hero-stat-icon">📊</span>
-                        <div>
-                            <strong>Seguimiento en vivo</strong>
-                            <span>Estado: pendiente → aprobada</span>
-                        </div>
-                    </div>
-                    <div class="hero-stat">
-                        <span class="hero-stat-icon">🔒</span>
-                        <div>
-                            <strong>Datos seguros</strong>
-                            <span>Guardados en PostgreSQL</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 
     <section class="section" id="servicios">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Todo lo que necesitas</h2>
-                <p class="section-sub">Una plataforma pensada para familias y para el equipo administrativo de la escuela.</p>
+                <h2 class="section-title">La institución</h2>
+                <p class="section-sub">Escuela Básica Nacional La Cuadra de Bolívar. Ofrecemos formación en preescolar y primaria, con inscripción digital para representantes.</p>
             </div>
             <div class="features-grid">
                 <article class="feature-card">
-                    <div class="feature-card__icon feature-card__icon--teal">👨‍👩‍👧</div>
-                    <h3>Panel familiar</h3>
-                    <p>Registra estudiantes, direcciones e inscripciones desde tu cuenta personal.</p>
+                    <div class="feature-card__icon feature-card__icon--gold">🧒</div>
+                    <h3>Preescolar</h3>
+                    <p>Sala de 3, sala de 4, sala de 5 y sala mixta (4 y 5 años). Cupo máximo: 40 por aula.</p>
                 </article>
                 <article class="feature-card">
-                    <div class="feature-card__icon feature-card__icon--coral">⚙️</div>
-                    <h3>Gestión admin</h3>
-                    <p>Revisa solicitudes, cambia estados y consulta el historial completo de cada trámite.</p>
+                    <div class="feature-card__icon feature-card__icon--teal">📘</div>
+                    <h3>Primaria</h3>
+                    <p>1er y 2do grado con secciones A y B; de 3ro a 6to solo sección A. Cupo máximo: 40 por aula.</p>
                 </article>
                 <article class="feature-card">
-                    <div class="feature-card__icon feature-card__icon--gold">📲</div>
-                    <h3>Desde el celular</h3>
-                    <p>Registra e inscribe desde el navegador del teléfono, sin instalar aplicaciones.</p>
+                    <div class="feature-card__icon feature-card__icon--coral">📝</div>
+                    <h3>Inscripción escolar</h3>
+                    <p>Plantilla de preinscripción con documentos PDF y seguimiento del estado.</p>
                 </article>
             </div>
         </div>
@@ -97,30 +74,53 @@
     <section class="section section--alt" id="proceso">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">¿Cómo funciona?</h2>
-                <p class="section-sub">Cuatro pasos simples para completar la inscripción.</p>
+                <h2 class="section-title">Proceso de inscripción</h2>
+                <p class="section-sub">Los pasos llevan a la misma plantilla: crear cuenta y cargar al estudiante.</p>
             </div>
             <div class="steps-row">
-                <div class="step-item">
+                <a class="step-item" href="login/login.html?form=register">
                     <div class="step-num">1</div>
                     <h4>Crear cuenta</h4>
-                    <p>Regístrate con tu cédula y datos de contacto.</p>
-                </div>
-                <div class="step-item">
+                    <p>Registro del representante con cédula y correo.</p>
+                </a>
+                <a class="step-item" href="login/login.html?form=register">
                     <div class="step-num">2</div>
                     <h4>Datos del alumno</h4>
-                    <p>Nombre, grado y documentación del estudiante.</p>
-                </div>
-                <div class="step-item">
+                    <p>Nombre, grado y sección en el panel del representante.</p>
+                </a>
+                <a class="step-item" href="login/login.html?form=register">
                     <div class="step-num">3</div>
                     <h4>Dirección</h4>
-                    <p>Ubicación de residencia de la familia.</p>
-                </div>
-                <div class="step-item">
+                    <p>Domicilio de la familia, desde el estudiante seleccionado.</p>
+                </a>
+                <a class="step-item" href="login/login.html?form=register">
                     <div class="step-num">4</div>
-                    <h4>Confirmar</h4>
-                    <p>Envío con estado pendiente hasta revisión.</p>
-                </div>
+                    <h4>Enviar plantilla</h4>
+                    <p>Preinscripción a revisión de la institución.</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="manual">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Manual de usuario</h2>
+                <p class="section-sub">Cómo usa el sistema un representante y un administrador de la institución.</p>
+            </div>
+            <div class="features-grid">
+                <article class="feature-card">
+                    <h3>Representante</h3>
+                    <p>Inicia sesión, registra estudiantes en la grilla, selecciona un alumno para su dirección y envía la inscripción.</p>
+                </article>
+                <article class="feature-card">
+                    <h3>Administrador</h3>
+                    <p>Entra al panel de inscripciones, selecciona un registro, aprueba o rechaza en modal, y configura logo e institución.</p>
+                </article>
+                <article class="feature-card">
+                    <h3>Documento</h3>
+                    <p><a href="manual.html">Abrir el manual de la institución</a></p>
+                </article>
             </div>
         </div>
     </section>
@@ -155,7 +155,7 @@
     </section>
 
     <footer class="app-footer">
-        <p>&copy; 2026 Escuela básica nacional la cuadra de Bolivar · Sistema de inscripciones</p>
+        <p>&copy; 2026 Escuela Básica Nacional La Cuadra de Bolívar · Sistema de inscripciones</p>
     </footer>
 
     <script src="js/api.js"></script>

@@ -1,4 +1,4 @@
-# Sistema de inscripciones — Escuela básica nacional la cuadra de Bolivar
+# Sistema de inscripciones — Escuela Básica Nacional La Cuadra de Bolívar
 
 Aplicación web para inscripciones: funciona en celular y PC. API Node.js y base de datos **PostgreSQL**.
 

@@ -85,8 +85,11 @@ const refreshSections = () => {
             const opt = document.createElement('option');
             opt.value = String(section.id);
             opt.textContent = section.nombre;
+            opt.disabled = section.disponible === false;
             sectionSelect.appendChild(opt);
         });
+    const enabled = Array.from(sectionSelect.options).filter((opt) => opt.value && !opt.disabled);
+    if (enabled.length === 1) sectionSelect.value = enabled[0].value;
 };
 
 document.addEventListener('DOMContentLoaded', () => {

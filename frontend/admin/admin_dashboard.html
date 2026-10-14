@@ -3,19 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administración — Escuela básica nacional la cuadra de Bolivar</title>
+    <title>Administración — Escuela Básica Nacional La Cuadra de Bolívar</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/theme.css">
 </head>
-<body>
+<body class="panel-app">
     <header class="app-header">
         <button type="button" class="brand" data-panel="inscripciones">
             <span class="brand-icon">🎓</span>
-            <span class="brand-name">Escuela básica nacional la cuadra de Bolivar</span>
+            <span class="brand-name">Escuela Básica Nacional La Cuadra de Bolívar</span>
         </button>
         <nav>
             <span id="user-greeting" class="user-chip"></span>
-            <button type="button" class="header-config-btn" data-panel="configuracion" title="Configuración" aria-label="Configuración">⚙️</button>
-            <button type="button" class="btn btn-ghost btn-sm" data-panel="estudiantes">Inicio</button>
+            <div class="config-wrap">
+                <button type="button" class="header-config-btn" id="admin-config-toggle" title="Configuración" aria-label="Configuración">⚙️</button>
+                <div class="config-menu" id="admin-config-menu" hidden>
+                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="institucion">Institución y logo</button>
+                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="cupos">Cupos por aula</button>
+                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="usuarios">Usuarios del sistema</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" data-panel="inscripciones">Inicio</button>
             <button id="logout-btn" class="btn btn-ghost btn-sm" type="button">Salir</button>
         </nav>
     </header>
@@ -23,7 +31,7 @@
 
     <div class="dashboard-shell">
         <aside class="dashboard-sidebar">
-            <div class="sidebar-brand" data-institution-name>Escuela básica nacional la cuadra de Bolivar</div>
+            <div class="sidebar-brand" data-institution-name>Escuela Básica Nacional La Cuadra de Bolívar</div>
             <ul class="sidebar-nav">
                 <li><button type="button" data-panel="inscripciones" class="active">📋 Inscripciones</button></li>
                 <li><button type="button" data-panel="preinscribir">🖊️ Preinscribir</button></li>
@@ -61,6 +69,9 @@
                     <div class="tab-row" id="enrollment-tabs">
                         <button type="button" class="tab-btn active" data-tab="preinscritos">Preinscritos</button>
                         <button type="button" class="tab-btn" data-tab="inscritos">Inscritos</button>
+                        <button type="button" class="btn btn-outline btn-sm" id="enrollment-view-btn" disabled>Ver / modificar</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="enrollment-approve-btn" disabled>Aprobar</button>
+                        <button type="button" class="btn btn-danger btn-sm" id="enrollment-reject-btn" disabled>Rechazar</button>
                         <button type="button" class="btn btn-outline btn-sm" id="export-csv-btn">Exportar CSV</button>
                         <button type="button" class="btn btn-outline btn-sm" id="print-grid-btn">Imprimir PDF</button>
                     </div>
@@ -112,6 +123,7 @@
                                 <select id="operator-section-select" required>
                                     <option value="">Selecciona sección</option>
                                 </select>
+                                <p class="field-hint" id="operator-cupo-hint">Cada aula tiene un cupo máximo.</p>
                             </div>
                         </div>
                         <div class="form-row">
@@ -204,8 +216,13 @@
                             <span class="card-header__icon">📚</span>
                             <div><h2>Docentes registrados</h2></div>
                         </div>
-                        <div id="teachers-container"></div>
-                    </article>
+                    <div class="grid-toolbar">
+                        <input type="search" class="form-control" id="teachers-search" placeholder="Buscar docente">
+                        <button type="button" class="btn btn-danger btn-sm" id="teacher-delete-btn" disabled>Borrar</button>
+                    </div>
+                    <div id="teachers-container"></div>
+                    <div id="teachers-grid-footer"></div>
+                </article>
                 </div>
             </section>
 
@@ -215,24 +232,67 @@
                     <p>Domicilios cargados por los representantes.</p>
                 </div>
                 <article class="card card--wide" id="direcciones-lista">
+                    <div class="grid-toolbar">
+                        <input type="search" class="form-control" id="admin-address-search" placeholder="Buscar dirección">
+                        <button type="button" class="btn btn-danger btn-sm" id="admin-address-delete-btn" disabled>Borrar</button>
+                    </div>
                     <div id="direcciones-container"></div>
+                    <div id="admin-address-footer"></div>
                 </article>
             </section>
 
             <section class="admin-panel" id="panel-mensajes">
                 <div class="dashboard-top">
-                    <h2>Mensajes de contacto</h2>
-                    <p>Consultas enviadas desde la página de inicio.</p>
+                    <h2>Mensajes</h2>
+                    <p>Avisos colectivos a representantes y consultas de la página de inicio.</p>
                 </div>
-                <article class="card card--wide" id="contactos">
-                    <div id="contactos-container"></div>
-                </article>
+                <div class="dashboard-layout dashboard-layout--2col">
+                    <article class="card card--wide">
+                        <div class="card-header">
+                            <span class="card-header__icon">📢</span>
+                            <div>
+                                <h2>Aviso colectivo</h2>
+                                <p>Llega a todos los representantes</p>
+                            </div>
+                        </div>
+                        <form id="aviso-form" class="form-stack">
+                            <div class="form-field">
+                                <label>Título</label>
+                                <input type="text" id="aviso-titulo" maxlength="160" required placeholder="Ej. Cierre de inscripciones">
+                            </div>
+                            <div class="form-field">
+                                <label>Mensaje</label>
+                                <textarea id="aviso-mensaje" rows="5" required placeholder="Texto que verán todos los representantes"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Enviar a representantes</button>
+                        </form>
+                        <div class="grid-toolbar" style="margin-top:1rem">
+                            <input type="search" class="form-control" id="avisos-search" placeholder="Buscar aviso enviado">
+                        </div>
+                        <div id="avisos-container"></div>
+                        <div id="avisos-grid-footer"></div>
+                    </article>
+                    <article class="card card--wide" id="contactos">
+                        <div class="card-header">
+                            <span class="card-header__icon">✉️</span>
+                            <div>
+                                <h2>Consultas web</h2>
+                                <p>Mensajes del formulario de contacto</p>
+                            </div>
+                        </div>
+                        <div class="grid-toolbar">
+                            <input type="search" class="form-control" id="contacts-search" placeholder="Buscar mensaje">
+                        </div>
+                        <div id="contactos-container"></div>
+                        <div id="contacts-grid-footer"></div>
+                    </article>
+                </div>
             </section>
 
             <section class="admin-panel" id="panel-configuracion">
                 <div class="dashboard-top">
                     <h2>Configuración</h2>
-                    <p>Logo, nombre de la institución y usuarios del sistema.</p>
+                    <p>Logo, nombre de la institución, cupos por aula y usuarios del sistema.</p>
                 </div>
                 <div class="dashboard-layout dashboard-layout--2col">
                     <article class="card card--wide" id="configuraciones">
@@ -253,14 +313,34 @@
                             <button type="submit" class="btn btn-primary">Guardar configuración</button>
                         </form>
                     </article>
-                    <article class="card card--wide">
+                    <article class="card card--wide" id="config-usuarios">
                         <div class="card-header">
                             <span class="card-header__icon">👥</span>
                             <div><h3>Usuarios del sistema</h3></div>
                         </div>
+                        <div class="grid-toolbar">
+                            <input type="search" class="form-control" id="users-search" placeholder="Buscar usuario">
+                            <button type="button" class="btn btn-outline btn-sm" id="user-password-btn" disabled>Cambiar clave</button>
+                        </div>
                         <div id="users-container"></div>
+                        <div id="users-grid-footer"></div>
                     </article>
                 </div>
+                <article class="card card--wide" id="config-cupos" style="margin-top:1rem">
+                    <div class="card-header">
+                        <span class="card-header__icon">🎒</span>
+                        <div>
+                            <h3>Cupos por aula</h3>
+                            <p>Límite de alumnos por grado y sección</p>
+                        </div>
+                    </div>
+                    <div class="grid-toolbar">
+                        <input type="search" class="form-control" id="cupos-search" placeholder="Buscar grado o sección">
+                        <button type="button" class="btn btn-outline btn-sm" id="cupo-edit-btn" disabled>Editar cupo</button>
+                    </div>
+                    <div id="cupos-container"></div>
+                    <div id="cupos-grid-footer"></div>
+                </article>
             </section>
         </main>
     </div>
@@ -293,6 +373,7 @@
     <script src="../js/api.js"></script>
     <script src="../js/institution.js"></script>
     <script src="../js/ui.js"></script>
+    <script src="../js/grid.js"></script>
     <script src="admin_dashboard.js"></script>
 </body>
 </html>

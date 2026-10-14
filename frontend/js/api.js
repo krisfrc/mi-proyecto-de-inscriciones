@@ -19,4 +19,21 @@
         const base = String(window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
         return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
     };
+
+    window.formatSectionQuota = (section, { currentSectionId } = {}) => {
+        const cupo = Number(section?.cupo) || 0;
+        let ocupados = Number(section?.ocupados) || 0;
+        if (currentSectionId && String(section.id) === String(currentSectionId) && ocupados > 0) {
+            ocupados -= 1;
+        }
+        const full = ocupados >= cupo;
+        const text = `${section.nombre} — ${ocupados}/${cupo} cupos`;
+        return {
+            label: full ? `${text} (sin cupo)` : text,
+            full,
+            ocupados,
+            cupo,
+            disponibles: Math.max(cupo - ocupados, 0),
+        };
+    };
 })();

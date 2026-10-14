@@ -1,6 +1,6 @@
 # Checklist — requisitos de la materia
 
-Proyecto: **Sistema de inscripciones** · Escuela básica nacional la cuadra de Bolivar
+Proyecto: **Sistema de inscripciones** · Escuela Básica Nacional La Cuadra de Bolívar
 
 ---
 

@@ -1,8 +1,9 @@
 # Diagrama entidad-relación (ER)
 
-Base de datos: `escuela_inscripciones` · PostgreSQL
+Base de datos: `escuela_inscripciones` · PostgreSQL  
+Modelo real del sistema (incluye migraciones 002–010).
 
-## Diagrama (para informe o presentación)
+## Diagrama
 
 ```mermaid
 erDiagram
@@ -12,111 +13,56 @@ erDiagram
     rm_pagin ||--|| permisos : define
 
     usuarios ||--o{ direcciones : registra
-    usuarios ||--o{ estudiantes : tiene
+    usuarios ||--o{ estudiantes : representa
     usuarios ||--o{ inscripciones : solicita
     usuarios ||--o{ inscripcion_historial : modifica
+    usuarios ||--o{ avisos_colectivos : publica
+
+    grados ||--o{ secciones : divide
+    grados ||--o{ estudiantes : cursa
+    secciones ||--o{ estudiantes : agrupa
+    periodos_escolares ||--o{ inscripciones : corresponde
 
     estudiantes ||--o| inscripciones : inscribe
     inscripciones ||--o{ inscripcion_historial : historial
+    inscripciones ||--o{ preinscripcion_documentos : adjunta
+    documentos_tipos ||--o{ preinscripcion_documentos : clasifica
 
-    roles {
-        int id PK
-        string nombre UK
-    }
-
-    usuarios {
-        int id PK
-        string nombre
-        string apellido
-        string cedula UK
-        string contraseña
-        int rol_id FK
-    }
-
-    direcciones {
-        int id PK
-        string calle
-        string av
-        string barrio
-        string n_casa
-        string parroquia
-        string municipio
-        string estado
-        int id_user FK
-    }
-
-    modulos {
-        int id PK
-        string nombre
-    }
-
-    rm_pagin {
-        int id PK
-        int rol_id FK
-        int modulo_id FK
-        string pagina
-    }
-
-    permisos {
-        int id PK
-        int id_rm_pagin FK
-        bool puede_crear
-        bool puede_leer
-        bool puede_editar
-        bool puede_borrar
-    }
-
-    estudiantes {
-        int id PK
-        string nombre
-        string grado
-        int usuario_id FK
-    }
-
-    inscripciones {
-        int id PK
-        int usuario_id FK
-        int estudiante_id FK UK
-        timestamp fecha
-        string estado
-        string observaciones
-    }
-
-    inscripcion_historial {
-        int id PK
-        int inscripcion_id FK
-        string estado_anterior
-        string estado_nuevo
-        int usuario_id FK
-        string nota
-        timestamp creado_en
-    }
-
-    contactos {
-        int id PK
-        string nombre
-        string email
-        string mensaje
-        timestamp creado_en
-    }
+    roles { int id PK string nombre UK }
+    usuarios { int id PK string nombre string apellido string cedula UK string email string contraseña int rol_id FK }
+    direcciones { int id PK string calle string av string barrio string n_casa string parroquia string municipio string estado int id_user FK }
+    estudiantes { int id PK string nombre string cedula string grado int grado_id FK int seccion_id FK int usuario_id FK date fecha_nacimiento string sexo string foto_url }
+    grados { int id PK string nombre int orden }
+    secciones { int id PK int grado_id FK string nombre int cupo }
+    periodos_escolares { int id PK string nombre date fecha_inicio date fecha_fin bool activo }
+    inscripciones { int id PK int usuario_id FK int estudiante_id FK UK int periodo_id FK string estado timestamp fecha }
+    inscripcion_historial { int id PK int inscripcion_id FK string estado_anterior string estado_nuevo int usuario_id FK }
+    preinscripcion_documentos { int id PK int inscripcion_id FK string nombre_archivo string ruta_archivo }
+    documentos_tipos { int id PK string codigo UK string nombre bool obligatorio }
+    docentes { int id PK string nombre string apellido string cedula UK string especialidad }
+    institucion_config { int id PK string nombre string logo_url }
+    contactos { int id PK string nombre string mensaje timestamp creado_en }
+    avisos_colectivos { int id PK string titulo string mensaje int usuario_id FK timestamp creado_en }
+    modulos { int id PK string nombre }
+    rm_pagin { int id PK int rol_id FK int modulo_id FK string pagina }
+    permisos { int id PK int id_rm_pagin FK bool puede_crear bool puede_leer bool puede_editar bool puede_borrar }
 ```
 
-## Cómo verlo en pgAdmin
+## Tablas (para el informe)
 
-1. **escuela_inscripciones** → clic derecho → **ERD For Database** (si tu versión de pgAdmin lo tiene).
-2. O **Query Tool** → pegar el SQL de `backend/schema/schema.sql` y revisar tablas en **Schemas → public → Tables**.
+| Tabla | Qué guarda |
+|-------|------------|
+| `roles` / `usuarios` | Admin y representante (cédula, correo, clave) |
+| `direcciones` | Domicilio del representante |
+| `grados` / `secciones` / `periodos_escolares` | Catálogo académico: preescolar por salas, 1er/2do A-B, 3ro-6to solo A, cupo 40 |
+| `estudiantes` | Alumnos del representante (foto y datos de personalización) |
+| `inscripciones` | Preinscripción y estado |
+| `inscripcion_historial` | Auditoría de estados |
+| `preinscripcion_documentos` | PDF adjuntos |
+| `docentes` | Profesores |
+| `institucion_config` | Nombre y logo |
+| `permisos` / `rm_pagin` | RBAC |
+| `contactos` | Mensajes de la web |
+| `avisos_colectivos` | Mensajes de la institución a todos los representantes |
 
-## Tablas resumidas
-
-| Tabla | Descripción |
-|-------|-------------|
-| `roles` | admin, user |
-| `usuarios` | Login y rol |
-| `direcciones` | Domicilio (barrio, parroquia, municipio, estado) |
-| `modulos` | Módulos del sistema |
-| `rm_pagin` | Rol ↔ módulo ↔ página |
-| `permisos` | CRUD por rol (RBAC) |
-| `estudiantes` | Alumnos por familia |
-| `inscripciones` | Solicitud + estado |
-| `inscripcion_historial` | Flujo de estados |
-| `contactos` | Mensajes del formulario web |
+En pgAdmin: clic derecho en `escuela_inscripciones` → **ERD For Database**.

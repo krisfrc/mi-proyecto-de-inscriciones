@@ -2,6 +2,7 @@
 -- Después tendrás que registrarte desde la web para crear el primer usuario.
 
 TRUNCATE TABLE
+    avisos_colectivos,
     inscripcion_historial,
     inscripciones,
     estudiantes,

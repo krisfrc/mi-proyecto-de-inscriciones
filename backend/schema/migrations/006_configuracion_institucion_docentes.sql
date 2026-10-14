@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS institucion_config (
 );
 
 INSERT INTO institucion_config (nombre)
-SELECT 'Escuela básica nacional la cuadra de Bolivar'
+SELECT 'Escuela Básica Nacional La Cuadra de Bolívar'
 WHERE NOT EXISTS (SELECT 1 FROM institucion_config);
 
 CREATE TABLE IF NOT EXISTS docentes (
