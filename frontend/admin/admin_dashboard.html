@@ -18,9 +18,9 @@
             <div class="config-wrap">
                 <button type="button" class="header-config-btn" id="admin-config-toggle" title="Configuración" aria-label="Configuración">⚙️</button>
                 <div class="config-menu" id="admin-config-menu" hidden>
-                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="institucion">Institución y logo</button>
-                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="cupos">Cupos por aula</button>
-                    <button type="button" class="config-menu__item" data-panel="configuracion" data-config-goto="usuarios">Usuarios del sistema</button>
+                    <button type="button" class="config-menu__item" data-panel="institucion">Institución y logo</button>
+                    <button type="button" class="config-menu__item" data-panel="cupos">Cupos por aula</button>
+                    <button type="button" class="config-menu__item" data-panel="usuarios">Usuarios del sistema</button>
                 </div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" data-panel="inscripciones">Inicio</button>
@@ -289,57 +289,58 @@
                 </div>
             </section>
 
-            <section class="admin-panel" id="panel-configuracion">
+            <section class="admin-panel" id="panel-institucion">
                 <div class="dashboard-top">
-                    <h2>Configuración</h2>
-                    <p>Logo, nombre de la institución, cupos por aula y usuarios del sistema.</p>
+                    <h2>Institución y logo</h2>
+                    <p>Nombre de la institución y el logo que se muestra en el sistema.</p>
                 </div>
-                <div class="dashboard-layout dashboard-layout--2col">
-                    <article class="card card--wide" id="configuraciones">
-                        <form id="institution-form" class="form-stack">
-                            <div class="form-field">
-                                <label>Nombre institución</label>
-                                <input type="text" id="institution-name" required>
-                            </div>
-                            <div class="form-field">
-                                <label>Logo de la institución</label>
-                                <div class="logo-preview-wrap">
-                                    <img id="institution-logo-preview" alt="Logo actual" hidden>
-                                    <input type="file" id="institution-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif">
-                                </div>
-                                <p class="field-hint">Subí un PNG, JPG o WEBP. Reemplaza el logo actual.</p>
-                            </div>
-                            <p class="field-hint">Los colores de la plataforma son los de la bandera de Venezuela: amarillo, azul y rojo.</p>
-                            <button type="submit" class="btn btn-primary">Guardar configuración</button>
-                        </form>
-                    </article>
-                    <article class="card card--wide" id="config-usuarios">
-                        <div class="card-header">
-                            <span class="card-header__icon">👥</span>
-                            <div><h3>Usuarios del sistema</h3></div>
+                <article class="card card--wide" id="configuraciones">
+                    <form id="institution-form" class="form-stack">
+                        <div class="form-field">
+                            <label>Nombre institución</label>
+                            <input type="text" id="institution-name" required>
                         </div>
-                        <div class="grid-toolbar">
-                            <input type="search" class="form-control" id="users-search" placeholder="Buscar usuario">
-                            <button type="button" class="btn btn-outline btn-sm" id="user-password-btn" disabled>Cambiar clave</button>
+                        <div class="form-field">
+                            <label>Logo de la institución</label>
+                            <div class="logo-preview-wrap">
+                                <img id="institution-logo-preview" alt="Logo actual" hidden>
+                                <input type="file" id="institution-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif">
+                            </div>
+                            <p class="field-hint">Subí un PNG, JPG o WEBP. Reemplaza el logo actual.</p>
                         </div>
-                        <div id="users-container"></div>
-                        <div id="users-grid-footer"></div>
-                    </article>
+                        <p class="field-hint">Los colores de la plataforma son los de la bandera de Venezuela: amarillo, azul y rojo.</p>
+                        <button type="submit" class="btn btn-primary">Guardar configuración</button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="admin-panel" id="panel-cupos">
+                <div class="dashboard-top">
+                    <h2>Cupos por aula</h2>
+                    <p>Límite de alumnos por grado y sección.</p>
                 </div>
-                <article class="card card--wide" id="config-cupos" style="margin-top:1rem">
-                    <div class="card-header">
-                        <span class="card-header__icon">🎒</span>
-                        <div>
-                            <h3>Cupos por aula</h3>
-                            <p>Límite de alumnos por grado y sección</p>
-                        </div>
-                    </div>
+                <article class="card card--wide" id="config-cupos">
                     <div class="grid-toolbar">
                         <input type="search" class="form-control" id="cupos-search" placeholder="Buscar grado o sección">
                         <button type="button" class="btn btn-outline btn-sm" id="cupo-edit-btn" disabled>Editar cupo</button>
                     </div>
                     <div id="cupos-container"></div>
                     <div id="cupos-grid-footer"></div>
+                </article>
+            </section>
+
+            <section class="admin-panel" id="panel-usuarios">
+                <div class="dashboard-top">
+                    <h2>Usuarios del sistema</h2>
+                    <p>Cuentas de acceso y cambio de clave.</p>
+                </div>
+                <article class="card card--wide" id="config-usuarios">
+                    <div class="grid-toolbar">
+                        <input type="search" class="form-control" id="users-search" placeholder="Buscar usuario">
+                        <button type="button" class="btn btn-outline btn-sm" id="user-password-btn" disabled>Cambiar clave</button>
+                    </div>
+                    <div id="users-container"></div>
+                    <div id="users-grid-footer"></div>
                 </article>
             </section>
         </main>

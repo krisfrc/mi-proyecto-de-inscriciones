@@ -17,15 +17,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const greeting = byId('user-greeting');
     if (greeting) greeting.textContent = user.nombre;
 
+    const configPanels = new Set(['datos', 'cuenta']);
     const showUserPanel = (panelId) => {
-        const valid = ['estudiantes', 'inscripciones', 'avisos', 'configuracion'];
-        const id = valid.includes(panelId) ? panelId : 'estudiantes';
+        const requested = panelId === 'configuracion' ? 'datos' : panelId;
+        const valid = ['estudiantes', 'inscripciones', 'avisos', 'datos', 'cuenta'];
+        const id = valid.includes(requested) ? requested : 'estudiantes';
         document.querySelectorAll('.user-panel').forEach((panel) => {
             panel.classList.toggle('is-active', panel.id === `panel-${id}`);
         });
         document.querySelectorAll('[data-panel]').forEach((link) => {
             link.classList.toggle('active', link.dataset.panel === id);
         });
+        const configBtn = byId('user-config-toggle');
+        if (configBtn) configBtn.classList.toggle('is-active', configPanels.has(id));
         const nextHash = `#${id}`;
         if (location.hash !== nextHash) {
             history.replaceState({ panel: id }, '', `${location.pathname}${nextHash}`);
@@ -70,14 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const representativeChip = byId('representative-loaded');
-    if (representativeChip) {
-        representativeChip.innerHTML = `
-            <strong>Representante:</strong>
-            <span>${user.nombre} ${user.apellido || ''}</span>
-            <span>Cédula ${user.cedula}</span>
-            <span>${user.email || 'Sin correo'}</span>
-        `;
-    }
 
     const setStudentActions = (row) => {
         byId('student-edit-btn').disabled = !row;
@@ -377,11 +373,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fillProfileForm = () => {
-        if (!byId('profile-form')) return;
-        byId('profile-nombre').value = user.nombre || '';
-        byId('profile-apellido').value = user.apellido || '';
-        byId('profile-cedula').value = user.cedula || '';
-        byId('profile-email').value = user.email || '';
+        if (byId('profile-nombre')) byId('profile-nombre').value = user.nombre || '';
+        if (byId('profile-apellido')) byId('profile-apellido').value = user.apellido || '';
+        if (byId('profile-cedula')) byId('profile-cedula').value = user.cedula || '';
+        if (byId('profile-email')) byId('profile-email').value = user.email || '';
+    };
+
+    const refreshRepresentativeChip = () => {
+        if (!representativeChip) return;
+        representativeChip.innerHTML = `
+            <strong>Representante:</strong>
+            <span>${user.nombre} ${user.apellido || ''}</span>
+            <span>Cédula ${user.cedula}</span>
+            <span>${user.email || 'Sin correo'}</span>
+        `;
+    };
+
+    const saveProfile = async (payload, successMessage) => {
+        const res = await fetch(`${API_URL}/usuarios/${user.id}/perfil`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario_id: user.id, ...payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.error || 'No se pudo guardar la cuenta', 'error');
+            return false;
+        }
+        Object.assign(user, data);
+        localStorage.setItem('usuario', JSON.stringify(user));
+        if (greeting) greeting.textContent = user.nombre;
+        refreshRepresentativeChip();
+        showToast(successMessage, 'success');
+        return true;
     };
 
     byId('student-grade-select')?.addEventListener('change', refreshSections);
@@ -517,31 +541,22 @@ document.addEventListener('DOMContentLoaded', () => {
         loadEnrollments();
     };
 
+    refreshRepresentativeChip();
     fillProfileForm();
-    byId('profile-form').onsubmit = async (e) => {
+    byId('profile-datos-form').onsubmit = async (e) => {
         e.preventDefault();
-        const payload = {
-            usuario_id: user.id,
+        await saveProfile({
             nombre: byId('profile-nombre').value.trim(),
             apellido: byId('profile-apellido').value.trim(),
-            email: byId('profile-email').value.trim(),
-        };
+        }, 'Datos de representante actualizados');
+    };
+    byId('profile-cuenta-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const payload = { email: byId('profile-email').value.trim() };
         const password = byId('profile-password').value;
         if (password) payload.contraseña = password;
-        const res = await fetch(`${API_URL}/usuarios/${user.id}/perfil`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            showToast(data.error || 'No se pudo guardar la cuenta', 'error');
-            return;
-        }
-        localStorage.setItem('usuario', JSON.stringify({ ...user, ...data }));
-        showToast('Datos de representante actualizados', 'success');
-        byId('profile-password').value = '';
-        if (greeting) greeting.textContent = data.nombre;
+        const saved = await saveProfile(payload, 'Correo y contraseña actualizados');
+        if (saved) byId('profile-password').value = '';
     };
 
     loadStudents();

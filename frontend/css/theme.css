@@ -303,9 +303,9 @@ a { color: var(--color-primary); }
 /* ─── Hero (landing) ─── */
 .hero {
     position: relative;
-    padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 3rem);
+    padding: clamp(4rem, 10vw, 8rem) clamp(1.5rem, 5vw, 3rem);
     overflow: hidden;
-    background: #2c3e50;
+    background: #2c3e50 url('../assets/images/institucion.jpg') center / cover no-repeat;
     color: white;
 }
 
@@ -313,9 +313,7 @@ a { color: var(--color-primary); }
     content: '';
     position: absolute;
     inset: 0;
-    background:
-        linear-gradient(rgba(0, 0, 0, 0.55), rgba(44, 62, 80, 0.82)),
-        radial-gradient(ellipse 70% 50% at 80% 20%, rgba(0, 123, 255, 0.28) 0%, transparent 55%);
+    background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(20, 30, 40, 0.72));
     pointer-events: none;
 }
 
@@ -347,8 +345,6 @@ a { color: var(--color-primary); }
     line-height: 1.1;
     margin-bottom: 1rem;
 }
-
-.hero h2 span { color: var(--gold); }
 
 .hero-desc {
     font-size: 1.1rem;
@@ -1074,7 +1070,7 @@ a.step-item:hover {
 }
 
 .auth-brand {
-    background: #2c3e50;
+    background: linear-gradient(165deg, #007bff 0%, #0056b3 58%, #003d82 100%);
     color: white;
     padding: clamp(2rem, 6vw, 4rem);
     display: flex;
@@ -1082,6 +1078,22 @@ a.step-item:hover {
     justify-content: center;
     position: relative;
     overflow: hidden;
+}
+
+.auth-home-link {
+    align-self: flex-start;
+    margin-bottom: 2rem;
+    position: relative;
+    background: var(--flag-yellow);
+    color: #1a252f;
+    border: 2px solid var(--flag-yellow);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.auth-home-link:hover {
+    background: #ffe566;
+    color: #1a252f;
+    border-color: #ffe566;
 }
 
 .auth-brand h1 {
@@ -1442,7 +1454,8 @@ a.step-item:hover {
     font: inherit;
     color: inherit;
 }
-.config-menu__item:hover { background: var(--teal-50); color: var(--teal-900); }
+.config-menu__item:hover,
+.config-menu__item.active { background: var(--teal-50); color: var(--teal-900); font-weight: 600; }
 
 .grid-toolbar {
     display: flex;

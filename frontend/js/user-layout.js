@@ -27,7 +27,7 @@ const mountUserChrome = () => {
             </a>
             <nav>
                 <span id="user-greeting" class="user-chip">${user.nombre}</span>
-                <a href="usuario_dashboard.html#configuracion" class="header-config-btn ${activeId === 'cuenta' ? 'is-active' : ''}" title="Configuración" aria-label="Configuración">⚙️</a>
+                <a href="usuario_dashboard.html#datos" class="header-config-btn ${activeId === 'cuenta' || activeId === 'datos' ? 'is-active' : ''}" title="Configuración" aria-label="Configuración">⚙️</a>
                 <a href="usuario_dashboard.html#estudiantes" class="btn btn-ghost btn-sm">Inicio</a>
                 <button id="logout-btn" class="btn btn-ghost btn-sm" type="button">Salir</button>
             </nav>

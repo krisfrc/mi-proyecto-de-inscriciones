@@ -18,8 +18,8 @@
             <div class="config-wrap">
                 <button type="button" class="header-config-btn" id="user-config-toggle" title="Configuración" aria-label="Configuración">⚙️</button>
                 <div class="config-menu" id="user-config-menu" hidden>
-                    <button type="button" class="config-menu__item" data-panel="configuracion">Datos del representante</button>
-                    <button type="button" class="config-menu__item" data-panel="configuracion">Correo y contraseña</button>
+                    <button type="button" class="config-menu__item" data-panel="datos">Datos del representante</button>
+                    <button type="button" class="config-menu__item" data-panel="cuenta">Correo y contraseña</button>
                 </div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" data-panel="estudiantes">Inicio</button>
@@ -84,13 +84,13 @@
                 </article>
             </section>
 
-            <section class="user-panel" id="panel-configuracion">
+            <section class="user-panel" id="panel-datos">
                 <div class="dashboard-top">
-                    <h2>Configuración</h2>
-                    <p>Datos del representante, correo y contraseña.</p>
+                    <h2>Datos del representante</h2>
+                    <p>Nombre y apellido de la cuenta. La cédula no se modifica.</p>
                 </div>
                 <article class="card">
-                    <form id="profile-form" class="form-stack">
+                    <form id="profile-datos-form" class="form-stack">
                         <div class="form-row">
                             <div class="form-field">
                                 <label>Nombre</label>
@@ -105,16 +105,27 @@
                             <label>Cédula</label>
                             <input type="text" id="profile-cedula" disabled>
                         </div>
+                        <button type="submit" class="btn btn-primary">Guardar datos</button>
+                    </form>
+                </article>
+            </section>
+
+            <section class="user-panel" id="panel-cuenta">
+                <div class="dashboard-top">
+                    <h2>Correo y contraseña</h2>
+                    <p>El correo también sirve para recuperar la contraseña.</p>
+                </div>
+                <article class="card">
+                    <form id="profile-cuenta-form" class="form-stack">
                         <div class="form-field">
                             <label>Correo electrónico</label>
                             <input type="email" name="email" id="profile-email" required>
-                            <p class="field-hint">Si cambia el correo, también sirve para recuperar la contraseña.</p>
                         </div>
                         <div class="form-field">
                             <label>Nueva contraseña (opcional)</label>
                             <input type="password" name="contraseña" id="profile-password" minlength="3" placeholder="Dejá vacío si no querés cambiarla">
                         </div>
-                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                        <button type="submit" class="btn btn-primary">Guardar acceso</button>
                     </form>
                 </article>
             </section>

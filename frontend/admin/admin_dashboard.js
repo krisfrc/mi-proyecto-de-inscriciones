@@ -774,16 +774,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const greeting = document.getElementById('user-greeting');
     if (greeting) greeting.textContent = state.user.nombre;
 
+    const configPanels = new Set(['institucion', 'cupos', 'usuarios']);
     const showAdminPanel = (panelId) => {
-        const valid = ['inscripciones', 'preinscribir', 'docentes', 'direcciones', 'mensajes', 'configuracion'];
-        const id = valid.includes(panelId) ? panelId : 'inscripciones';
+        const requested = panelId === 'configuracion' ? 'institucion' : panelId;
+        const valid = ['inscripciones', 'preinscribir', 'docentes', 'direcciones', 'mensajes', 'institucion', 'cupos', 'usuarios'];
+        const id = valid.includes(requested) ? requested : 'inscripciones';
         document.querySelectorAll('.admin-panel').forEach((panel) => {
             panel.classList.toggle('is-active', panel.id === `panel-${id}`);
         });
         document.querySelectorAll('[data-panel]').forEach((link) => {
             link.classList.toggle('active', link.dataset.panel === id);
-            link.classList.toggle('is-active', link.classList.contains('header-config-btn') && id === 'configuracion');
         });
+        const configBtn = document.getElementById('admin-config-toggle');
+        if (configBtn) configBtn.classList.toggle('is-active', configPanels.has(id));
         const nextHash = `#${id}`;
         if (location.hash !== nextHash) {
             history.replaceState({ panel: id }, '', `${location.pathname}${nextHash}`);
@@ -828,13 +831,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     bindConfigMenu(document.getElementById('admin-config-toggle'), document.getElementById('admin-config-menu'));
-    document.querySelectorAll('[data-config-goto]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const map = { usuarios: 'config-usuarios', cupos: 'config-cupos', institucion: 'configuraciones' };
-            const target = document.getElementById(map[btn.dataset.configGoto] || 'configuraciones');
-            if (target) target.scrollIntoView({ behavior: 'smooth' });
-        });
-    });
 
     if (window.createDataGrid) {
         grids.teachers = createDataGrid({
